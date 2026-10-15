@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robin — Engineer & Product Builder</title>
+  <meta name="description" content="Engineer and product builder working where AI meets real software.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400&display=swap">
+  <link rel="stylesheet" href="assets/nocturne.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+
+<body>
+
+  <section id="top" class="hero" data-screen-label="01 Hero">
+    <div class="hero-inner">
+      <nav class="hero-nav" aria-label="Main">
+        <a href="#top" class="hero-logo" aria-label="Robin — home"></a>
+        <div class="hero-links"><a href="#work">Work</a><a href="#about">About</a></div>
+      </nav>
+
+      <div class="hero-img">
+        <img class="hero-field" src="assets/triangle-grid.svg" alt="" aria-hidden="true">
+        <svg class="hero-frame" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="frame-stroke" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="oklch(0.80 0.10 195)"></stop>
+              <stop offset="1" stop-color="var(--color-accent)"></stop>
+            </linearGradient>
+          </defs>
+          <polygon points="50,0 100,100 0,100" fill="var(--color-bg)" fill-opacity="0.88" stroke="url(#frame-stroke)"
+            stroke-width="1.4" vector-effect="non-scaling-stroke"></polygon>
+        </svg>
+        <div class="hero-portrait lighten">
+          <img src="assets/portrait.png" alt="Portrait of Robin" onerror="this.remove()">
+        </div>
+      </div>
+
+      <div class="hero-text">
+        <p class="hero-hello">Hi, I’m Robin Oliveira.</p>
+        <h1>I build digital products,<br>from plan to <em>delivery</em>.</h1>
+        <p class="hero-sub">Engineer and product builder working where AI meets real software — turning models into
+          tools
+          people actually use, from the first prototype to production.</p>
+      </div>
+    </div>
+
+    <a href="#work" class="scroll-cue" aria-label="Scroll to work">
+      <span class="scroll-cue-arrows" aria-hidden="true">
+        <svg width="12" height="8" viewBox="0 0 12 8">
+          <polygon points="0,0 12,0 6,8" fill="var(--color-accent)"></polygon>
+        </svg>
+        <svg width="12" height="8" viewBox="0 0 12 8">
+          <polygon points="0,0 12,0 6,8" fill="var(--color-accent)"></polygon>
+        </svg>
+      </span>
+      <span>Selected work</span>
+    </a>
+  </section>
+
+  <div class="fade-rule"></div>
+
+  <section id="work" class="work" data-screen-label="02 Portfolio">
+    <div class="work-head">
+      <div class="kicker">
+        <svg width="8" height="9" viewBox="0 0 8 9">
+          <polygon points="0,0 8,4.5 0,9" fill="var(--color-accent)"></polygon>
+        </svg>
+        <span>02 — Selected work</span>
+      </div>
+      <h2>Projects that shipped.</h2>
+    </div>
+
+    <div class="work-body">
+      <div class="chips" id="chips" role="tablist" aria-label="Projects"></div>
+      <div class="project-list" id="list" role="tablist" aria-label="Projects"></div>
+
+      <div class="work-main">
+        <div class="stage" id="stage">
+          <div id="slides"></div>
+          <div class="wipe-layer" id="wipe"></div>
+        </div>
+        <div class="detail">
+          <div class="detail-text" aria-live="polite">
+            <div class="detail-meta"><span id="d-year"></span><span id="d-role"></span></div>
+            <h3 id="d-title"></h3>
+            <p id="d-desc"></p>
+            <div class="detail-tags" id="d-tags"></div>
+          </div>
+          <a href="#work" class="btn btn-primary" id="d-link">
+            Case study
+            <svg width="9" height="10" viewBox="0 0 9 10">
+              <polygon points="0,0 9,5 0,10" fill="currentColor"></polygon>
+            </svg>
+          </a>
+        </div>
+        <div class="bars" id="bars"></div>
+      </div>
+    </div>
+  </section>
+
+  <script src="assets/main.js"></script>
+</body>
+
+</html>
