@@ -11,7 +11,7 @@ tags: [spec, status/planned]
 # 0001 — Migrate the portfolio to Next.js (React) with CSS Modules
 
 **Status:** planned — spec only. The site is still a static `index.html` + `assets/` (baseline commit `fcd4413`); no Next.js code exists yet.
-**Build doc:** `docs/plans/0001-nextjs-migration.md` (written by `/planc`, not yet).
+**Build doc:** `docs/plans/0001-nextjs-migration.md` (plan written, not executed yet).
 
 ## Why
 

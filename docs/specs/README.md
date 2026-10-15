@@ -6,4 +6,4 @@ Status vocabulary: `planned | in-progress | done`. On conflict, the code wins â€
 
 | Spec | Title | Status | Evidence |
 |---|---|---|---|
-| [0001](0001-nextjs-migration.md) | Migrate the portfolio to Next.js (React) with CSS Modules | planned | spec only |
+| [0001](0001-nextjs-migration.md) | Migrate the portfolio to Next.js (React) with CSS Modules | planned | plan written â€” run `/exec docs/plans/0001-nextjs-migration.md` |
