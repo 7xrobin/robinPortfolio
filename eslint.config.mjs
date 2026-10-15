@@ -13,8 +13,6 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "node_modules/**",
-    // Old static site, removed once the Next.js page reaches parity.
-    "assets/**",
   ]),
 ]);
 
