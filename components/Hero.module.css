@@ -1,0 +1,65 @@
+.hero {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(900px 560px at 85% -120px, color-mix(in srgb, oklch(0.42 0.08 225) 45%, transparent), transparent 62%),
+    radial-gradient(700px 500px at 10% 110%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
+    var(--color-bg);
+}
+.hero-inner {
+  position: relative; max-width: 1280px; margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 72px); min-height: 100vh;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--hero-gap);
+}
+
+.hero-nav {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: var(--nav-h);
+  padding: 0 clamp(20px, 5vw, 72px);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.hero-logo {
+  display: block; height: var(--logo-h); aspect-ratio: 361.1 / 128.93;
+  background-color: var(--color-text);
+  -webkit-mask: url(/robin-logo.svg) center / contain no-repeat;
+  mask: url(/robin-logo.svg) center / contain no-repeat;
+}
+.hero-links { display: flex; gap: 32px; font-size: 14px; }
+.hero-links a { color: color-mix(in srgb, var(--color-text) 72%, transparent); }
+.hero-links a:hover { color: var(--color-text); }
+
+/* The frame is equilateral (484 × 419.2 at full size). The shard field is
+   drawn in the design's 1280 × 760 space with the frame apex at (314, 150.4),
+   so it is placed in frame-relative units and scales with the frame. */
+.hero-img {
+  flex: var(--img-flex); min-width: 0; max-width: var(--img-max);
+  position: relative; z-index: 1; align-self: center; margin: var(--img-margin);
+  aspect-ratio: 484 / 419.2;
+}
+.hero-field {
+  position: absolute; pointer-events: none; max-width: none;
+  left: calc(-314 / 484 * 100%); top: calc(-150.4 / 419.2 * 100%);
+  width: calc(1280 / 484 * 100%); height: calc(760 / 419.2 * 100%);
+}
+.hero-frame {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, oklch(0.74 0.10 210) 50%, transparent));
+}
+.hero-portrait {
+  position: absolute; inset: 0; overflow: hidden;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.hero-portrait img { position: absolute; width: 92%; left: 4%; top: 4%; max-width: none; }
+
+.hero-text { flex: var(--text-flex); min-width: 0; position: relative; z-index: 2; padding: var(--text-pad); }
+.hero-hello {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 24px;
+  font-size: 17px; font-weight: 500; letter-spacing: 0.01em; color: oklch(0.84 0.07 205);
+}
+.hero h1 {
+  font-family: var(--font-outfit), var(--font-heading); font-weight: 300;
+  font-size: var(--h1-size); line-height: 1.08; letter-spacing: -0.02em; margin: 0;
+}
+.hero h1 em { font-style: normal; color: oklch(0.80 0.10 195); }
+.hero-sub {
+  font-size: var(--sub-size); line-height: 1.65; max-width: 46ch; margin: 24px 0 0;
+  color: color-mix(in srgb, var(--color-text) 80%, transparent);
+}
