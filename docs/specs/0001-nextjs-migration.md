@@ -3,15 +3,15 @@ number: "0001"
 type: spec
 slug: nextjs-migration
 title: Migrate the portfolio to Next.js (React) with CSS Modules
-status: planned
+status: done
 created: 2026-10-15
-tags: [spec, status/planned]
+tags: [spec, status/done]
 ---
 
 # 0001 — Migrate the portfolio to Next.js (React) with CSS Modules
 
-**Status:** planned — spec only. The site is still a static `index.html` + `assets/` (baseline commit `fcd4413`); no Next.js code exists yet.
-**Build doc:** `docs/plans/0001-nextjs-migration.md` (plan written, not executed yet).
+**Status:** done — the hero renders from a Next.js 16.4.1 static export (`next.config.ts`, `components/Hero.tsx`, `components/Hero.module.css`, `app/globals.css`); the old `index.html` + `assets/` are removed. Landed in `2a2b808`..`f8f4613`.
+**Build doc:** `docs/plans/0001-nextjs-migration.md` (executed).
 
 ## Why
 

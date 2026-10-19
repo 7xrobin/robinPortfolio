@@ -3,9 +3,9 @@ number: "0001"
 type: plan
 slug: nextjs-migration
 title: Migrate the portfolio to Next.js (React) with CSS Modules
-status: planned
+status: done
 created: 2026-10-15
-tags: [plan, status/planned]
+tags: [plan, status/done]
 ---
 
 # 0001 — Plan: migrate the portfolio hero to Next.js 16.4.1 with CSS Modules
