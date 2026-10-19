@@ -53,9 +53,14 @@ export interface FieldConfig {
     calmAtMs: number;
   };
   intro: {
+    /** The dot ripple grows from the frame centroid between these two times,
+     *  on the performance.now() clock (navigation start = 0). */
     rippleStartMs: number;
+    /** By then the ripple has passed the farthest section corner. */
     rippleEndMs: number;
+    /** Width of the ripple's soft edge, in cells. */
     rippleSoftCells: number;
+    /** No form starts before this time. */
     firstFormsMs: number;
   };
   maxDpr: number;

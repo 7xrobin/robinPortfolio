@@ -3,7 +3,14 @@
 import { useEffect, useRef } from "react";
 import styles from "./Hero.module.css";
 import { MOBILE_QUERY, fieldConfig, type FieldConfig, type Pacing } from "@/lib/field/config";
-import { buildLattice, designToSection, type Lattice, type Rect } from "@/lib/field/lattice";
+import {
+  buildLattice,
+  designToSection,
+  frameCentroid,
+  type Lattice,
+  type Point,
+  type Rect,
+} from "@/lib/field/lattice";
 import { place, type Form } from "@/lib/field/forms";
 
 /** Rect of `el` relative to `base`, in CSS px. */
@@ -21,6 +28,11 @@ interface FieldState {
   frame: Rect | null;
   logo: Rect | null;
   text: Rect | null;
+  /** Ripple origin (the frame centroid) and each node's distance to it. */
+  rippleCentre: Point;
+  rippleDist: Float32Array;
+  /** Ripple radius at which the farthest section corner is fully revealed. */
+  rippleMax: number;
 }
 
 /** A placed form with its own timeline. Times are on the performance.now() clock. */
@@ -162,6 +174,9 @@ export default function HeroField() {
       frame: null,
       logo: null,
       text: null,
+      rippleCentre: { x: 0, y: 0 },
+      rippleDist: new Float32Array(0),
+      rippleMax: 0,
     };
     let forms: LiveForm[] = [];
     let nextSpawn = 0;
@@ -181,6 +196,23 @@ export default function HeroField() {
 
       st.lattice =
         st.frame.width > 0 ? buildLattice(st.frame, st, st.logo, st.cfg) : null;
+      // The ripple runs from the frame centroid until its soft edge has passed
+      // the farthest section corner.
+      const centre = frameCentroid(st.frame);
+      const soft = st.cfg.intro.rippleSoftCells * (st.lattice?.side ?? 0);
+      st.rippleCentre = centre;
+      st.rippleMax =
+        Math.max(
+          Math.hypot(centre.x, centre.y),
+          Math.hypot(st.width - centre.x, centre.y),
+          Math.hypot(centre.x, st.height - centre.y),
+          Math.hypot(st.width - centre.x, st.height - centre.y),
+        ) + soft;
+      const nodes = st.lattice?.nodes ?? [];
+      st.rippleDist = new Float32Array(nodes.length);
+      nodes.forEach((n, i) => {
+        st.rippleDist[i] = Math.hypot(n.x - centre.x, n.y - centre.y);
+      });
       renderDots(dotsLayer, st);
       glowSize = renderGlow(glow, st);
       if (st.lattice) {
@@ -195,6 +227,13 @@ export default function HeroField() {
       forms = [];
     };
 
+    /** Ripple radius at `now`: 0 before the window, rippleMax after it. */
+    const rippleAt = (now: number) => {
+      const { rippleStartMs, rippleEndMs } = st.cfg.intro;
+      return st.rippleMax * clamp01((now - rippleStartMs) / (rippleEndMs - rippleStartMs));
+    };
+    const rippleSoft = () => Math.max(1e-3, st.cfg.intro.rippleSoftCells * (st.lattice?.side ?? 0));
+
     const pacingAt = (now: number) =>
       now < st.cfg.pacing.calmAtMs ? st.cfg.pacing.busy : st.cfg.pacing.calm;
     const gap = (p: Pacing) => p.gapMinMs + Math.random() * (p.gapMaxMs - p.gapMinMs);
@@ -204,12 +243,14 @@ export default function HeroField() {
       const before = forms.length;
       forms = forms.filter((f) => now - f.start < f.end);
       if (forms.length < before) nextSpawn = Math.max(nextSpawn, now + gap(pacing));
-      if (!st.lattice || now < nextSpawn || forms.length >= pacing.liveForms) return;
+      if (!st.lattice || now < st.cfg.intro.firstFormsMs) return;
+      if (now < nextSpawn || forms.length >= pacing.liveForms) return;
+      // Forms only start where the ripple has fully revealed the dots.
       const form = place(
         st.lattice,
         forms,
         { section: st, frame: st.frame, text: st.text },
-        { centre: { x: 0, y: 0 }, r: Infinity },
+        { centre: st.rippleCentre, r: rippleAt(now) - rippleSoft() },
         Math.random,
         st.cfg,
       );
@@ -283,11 +324,41 @@ export default function HeroField() {
       }
     };
 
+    // While the ripple grows the dots are drawn one by one, each faded in by
+    // the ripple's soft edge; once it has passed every corner, the cached
+    // layer takes over. The time is absolute, so a late hydration joins the
+    // ripple where it already is instead of restarting it.
+    const drawDots = (now: number) => {
+      if (now >= st.cfg.intro.rippleEndMs || !st.lattice) {
+        ctx.drawImage(dotsLayer, 0, 0, st.width, st.height);
+        return;
+      }
+      const r = rippleAt(now);
+      if (r <= 0) return;
+      const soft = rippleSoft();
+      const { dots } = st.cfg;
+      const radius = dots.radius * st.lattice.s;
+      ctx.fillStyle = dots.color;
+      const { nodes } = st.lattice;
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const e = clamp01((r - st.rippleDist[i]) / soft);
+        const edge = e * e * (3 - 2 * e);
+        const a = dots.opacity * n.weight * edge;
+        if (a <= 0.001) continue;
+        ctx.globalAlpha = a;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    };
+
     const draw = (now: number) => {
       ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
       ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, st.width, st.height);
-      ctx.drawImage(dotsLayer, 0, 0, st.width, st.height);
+      drawDots(now);
       for (const f of forms) drawForm(f, now);
       ctx.globalAlpha = 1;
     };
