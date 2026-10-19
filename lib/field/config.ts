@@ -105,9 +105,9 @@ export const FIELD: FieldConfig = {
   },
   formMix: { polyiamond: 0.6, largeTriangle: 0.25, hexagon: 0.15, attempts: 12 },
   pacing: {
-    busy: { liveForms: 6, penSpeed: 160, outlineHoldMs: 900, gapMinMs: 150, gapMaxMs: 400 },
+    busy: { liveForms: 5, penSpeed: 160, outlineHoldMs: 900, gapMinMs: 150, gapMaxMs: 400 },
     calm: { liveForms: 3, penSpeed: 80, outlineHoldMs: 1600, gapMinMs: 900, gapMaxMs: 2200 },
-    calmAtMs: 4000,
+    calmAtMs: 3500,
   },
   intro: {
     rippleStartMs: 250,
@@ -123,8 +123,15 @@ export const MOBILE_QUERY = "(max-width: 560px)";
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
-/** Overrides applied under MOBILE_QUERY. Empty for now; tuned by eye later. */
-export const MOBILE_OVERRIDES: DeepPartial<FieldConfig> = {};
+/** Overrides applied under MOBILE_QUERY: a fainter lattice and fewer forms,
+ *  because on a phone the field sits behind the text rather than beside it. */
+export const MOBILE_OVERRIDES: DeepPartial<FieldConfig> = {
+  dots: { opacity: 0.22 },
+  pacing: {
+    busy: { liveForms: 3 },
+    calm: { liveForms: 2 },
+  },
+};
 
 function merge<T>(base: T, over: DeepPartial<T> | undefined): T {
   if (!over) return base;
