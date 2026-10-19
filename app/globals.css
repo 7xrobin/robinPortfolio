@@ -115,8 +115,8 @@ img { display: block; max-width: 100%; }
   --nav-h: 88px;
   --logo-h: 28px;
   --hero-gap: 40px 80px;
-  --img-flex: 0 1 484px;
-  --img-max: 484px;
+  --img-flex: 0 1 480px;
+  --img-max: 480px;
   --img-margin: 48px 0 88px;
   --text-flex: 1 1 420px;
   --text-pad: 64px 0 96px;

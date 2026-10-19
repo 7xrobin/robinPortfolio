@@ -11,9 +11,10 @@ tags: [spec, status/planned]
 
 # 0002 — Animated triangle field and intro sequence for the hero
 
-**Status:** planned — spec only. The hero background is still the static `public/triangle-grid.svg`
-(`components/Hero.tsx:15`); there is no client component and no animation yet.
-**Build doc:** `docs/plans/0002-hero-field-animation.md` (not written yet).
+**Status:** planned — plan written. The hero background is still the static `public/triangle-grid.svg`
+(`components/Hero.tsx:17`), now the "Hero 6a refined" lattice from Claude Design; there is no
+client component and no animation yet.
+**Build doc:** `docs/plans/0002-hero-field-animation.md` (hardened, not executed yet).
 
 ## Why
 
@@ -38,27 +39,34 @@ field; the rest of the hero keeps its look.
   `.hero-inner`). The old field image covered a fixed 1280 × 760 box anchored to the frame; a
   full-section canvas lets the lattice reach every edge at every breakpoint.
 - **The lattice is computed, aligned to the frame — same geometry as the design.** The design
-  field (`triangle-grid.svg`) has cell side 44 and row height 38.1 in a space where the frame is
-  484 × 419.2, i.e. exactly 11 cells, with the frame apex on a lattice node. So:
-  `side = frameWidth / 11`, `rowHeight = side · √3/2`, origin = frame apex. The frame edges then
+  field ("Hero 6a refined", now `triangle-grid.svg`) has cell side 40 and row height 34.64 in a
+  1280 × 760 space where the frame is 480 × 415.7, i.e. exactly 12 cells wide and 12 rows tall,
+  with the apex on the lattice node (320, 138.6) and the base corners on lattice nodes too. So:
+  `side = frameWidth / 12`, `rowHeight = side · √3/2`, origin = frame apex. The frame edges then
   lie on lattice lines at every size, as in the design. The frame rect is measured from the DOM
   (`.hero-img`) and re-measured with a `ResizeObserver`.
-- **The design's radial fade is kept.** Every dot, line and fill is multiplied by the fade the
-  SVG used (centre at frame-x, apex-y + 199.6/484 · frameWidth; radius 640/484 · frameWidth;
-  opacity stops 0.95 → 0.4 → 0). Same falloff as today, so the text side stays quiet.
+- **The design's horizontal fade is kept.** Every dot, line and fill is multiplied by the fade the
+  SVG uses, a left-to-right ramp over the design space. In frame units, the design's x = 0 is
+  `apexX − 320/480 · frameWidth` and its width is `1280/480 · frameWidth`. The opacity stops are
+  1 at 0, 0.8 at 0.45, 0.2 at 0.75. The SVG holds 0.2 until its right edge, but the canvas
+  covers the whole section, so past the design's right edge (t > 1) the fade drops to 0 over one
+  cell. Without that, dots would cover the text side at 0.2.
 - **Base layer: dots only** (owner's decision). All lattice nodes are small faint dots. There are
   no permanent grid lines — a line exists only while a form is drawing it.
 - **Forms: traced by a "pen", then erased the same way.**
   - A form is a connected set of lattice triangles: a random polyiamond of 1–6 cells, a large
     triangle of side 2 or 3, or a hexagon of the 6 cells around one node.
   - Its outline (edges used by exactly one cell) is chained into one closed path. A pen draws the
-    path from node to node; each node it reaches lights up (the design's "lit" node style). After
-    a hold, the pen erases the path in the same direction — the tail follows the head.
+    path from node to node; each node it reaches lights up (the design's "lit" node style:
+    radius 1.6 in design units, `oklch(0.80 0.10 195)`, 4 px glow). After a hold, the pen erases
+    the path in the same direction — the tail follows the head.
   - About 40 % of forms fill: after the outline closes, its cells fade in one by one in one
-    colour from the design palette — teal `#33969b`, blue `#3a80b7`, accent `#9184d9` (hex of the
-    SVG's `oklch()` values, so they render the same in every canvas) — hold, fade out, then the
-    outline erases.
-  - Line colour is the design's line gradient (`#5dbcc1` → `#5fa5de` → `#9184d9`).
+    colour from the design palette — teal `#33969b`, blue `#3a80b7`, accent-500 `#968ae0` (hex of
+    the SVG's `oklch()` values and token, so they render the same in every canvas) — hold, fade
+    out, then the outline erases. Each cell gets its own fill opacity between 0.08 and 0.34, the
+    range the design uses, so a filled form looks uneven like the design and not flat.
+  - Line colour is the design's line gradient (`#5dbcc1` → `#5fa5de` → `#9184d9`), stroke
+    opacity 0.55, width 0.8 design units.
 - **The clean zone around the logo is a hard rule.** The logo rect (measured from the DOM) is
   padded by ~0.6 cell; inside it nothing is drawn — no dots, no forms. Outside it a smooth ramp
   over ~1.5 cells brings dots back, so the zone has no visible edge. Forms are rejected if any of
