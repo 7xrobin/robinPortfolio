@@ -1,5 +1,16 @@
 .hero {
   position: relative; overflow: hidden;
+  /* Intro timings. They are CSS, not lib/field/config.ts, because the intro
+     runs without JS. Base rules hold the final state; the hidden state lives
+     only in each keyframe's `from`, with fill-mode both. */
+  --intro-frame-delay: 1100ms;
+  --intro-frame-duration: 600ms;
+  --intro-portrait-delay: 1450ms;
+  --intro-portrait-duration: 700ms;
+  --intro-text-delay: 2000ms;
+  --intro-text-step: 150ms;
+  --intro-text-duration: 500ms;
+  --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
   background:
     radial-gradient(900px 560px at 85% -120px, color-mix(in srgb, oklch(0.42 0.08 225) 45%, transparent), transparent 62%),
     radial-gradient(700px 500px at 10% 110%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
@@ -23,7 +34,11 @@
   mask: url(/robin-logo.svg) center / contain no-repeat;
 }
 .hero-links { display: flex; gap: 32px; font-size: 14px; }
-.hero-links a { color: color-mix(in srgb, var(--color-text) 72%, transparent); }
+.hero-links a {
+  color: color-mix(in srgb, var(--color-text) 72%, transparent);
+  animation: hero-rise var(--intro-text-duration) var(--intro-ease) both;
+  animation-delay: calc(var(--intro-text-delay) + 3 * var(--intro-text-step));
+}
 .hero-links a:hover { color: var(--color-text); }
 
 /* The frame is equilateral (480 × 415.7 at full size) and exactly 12 lattice
@@ -42,24 +57,47 @@
 .hero-frame {
   position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
   filter: drop-shadow(0 0 18px color-mix(in srgb, oklch(0.74 0.10 210) 50%, transparent));
+  transform-origin: 50% 0;
+  animation: hero-frame-in var(--intro-frame-duration) var(--intro-ease) var(--intro-frame-delay) both;
 }
 .hero-portrait {
   position: absolute; inset: 0; overflow: hidden;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
-.hero-portrait img { position: absolute; width: 92%; left: 4%; top: 4%; max-width: none; }
+/* The reveal goes on the img: .hero-portrait's clip-path is the triangle. */
+.hero-portrait img {
+  position: absolute; width: 92%; left: 4%; top: 4%; max-width: none;
+  animation: hero-portrait-in var(--intro-portrait-duration) var(--intro-ease) var(--intro-portrait-delay) both;
+}
 
 .hero-text { flex: var(--text-flex); min-width: 0; position: relative; z-index: 2; padding: var(--text-pad); }
 .hero-hello {
   display: flex; align-items: center; gap: 12px; margin: 0 0 24px;
   font-size: 17px; font-weight: 500; letter-spacing: 0.01em; color: oklch(0.84 0.07 205);
+  animation: hero-rise var(--intro-text-duration) var(--intro-ease) var(--intro-text-delay) both;
 }
 .hero h1 {
   font-family: var(--font-outfit), var(--font-heading); font-weight: 300;
   font-size: var(--h1-size); line-height: 1.08; letter-spacing: -0.02em; margin: 0;
+  animation: hero-rise var(--intro-text-duration) var(--intro-ease) both;
+  animation-delay: calc(var(--intro-text-delay) + var(--intro-text-step));
 }
 .hero h1 em { font-style: normal; color: oklch(0.80 0.10 195); }
 .hero-sub {
   font-size: var(--sub-size); line-height: 1.65; max-width: 46ch; margin: 24px 0 0;
   color: color-mix(in srgb, var(--color-text) 80%, transparent);
+  animation: hero-rise var(--intro-text-duration) var(--intro-ease) both;
+  animation-delay: calc(var(--intro-text-delay) + 2 * var(--intro-text-step));
+}
+
+/* Intro keyframes: each starts hidden and ends on the visible base state. */
+@keyframes hero-frame-in {
+  from { opacity: 0; transform: scale(0.92); }
+}
+@keyframes hero-portrait-in {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0); }
+}
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
 }
