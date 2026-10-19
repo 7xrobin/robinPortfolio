@@ -292,7 +292,8 @@ export default function HeroField() {
       ctx.globalAlpha = 1;
     };
 
-    // Resizes only mark the field dirty; the next frame re-measures once.
+    // Resizes only mark the field dirty; the next frame re-measures once, so a
+    // resize while paused is picked up on resume.
     let dirty = true;
     let raf = 0;
     const markDirty = () => {
@@ -310,12 +311,43 @@ export default function HeroField() {
       raf = requestAnimationFrame(tick);
     };
 
+    // The loop runs only while the hero is on screen and the tab is visible.
+    // While paused no frame is pending; on resume every timeline shifts by the
+    // paused time, so forms carry on where they stopped instead of jumping.
+    let onScreen = true;
+    let pausedAt = -1;
+    const sync = () => {
+      const visible = onScreen && document.visibilityState === "visible";
+      if (visible && !raf) {
+        if (pausedAt >= 0) {
+          const paused = performance.now() - pausedAt;
+          for (const f of forms) f.start += paused;
+          nextSpawn += paused;
+          pausedAt = -1;
+        }
+        raf = requestAnimationFrame(tick);
+      } else if (!visible && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        pausedAt = performance.now();
+      }
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      sync();
+    });
+    io.observe(section);
+    document.addEventListener("visibilitychange", sync);
+
     const ro = new ResizeObserver(markDirty);
     for (const el of [section, frameEl, logoEl, textEl]) if (el) ro.observe(el);
     document.fonts.ready.then(markDirty, () => {});
-    raf = requestAnimationFrame(tick);
+    sync();
 
     return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", sync);
       ro.disconnect();
       cancelAnimationFrame(raf);
       raf = 0;
