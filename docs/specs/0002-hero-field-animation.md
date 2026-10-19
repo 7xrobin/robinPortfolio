@@ -11,10 +11,8 @@ tags: [spec, status/planned]
 
 # 0002 — Animated triangle field and intro sequence for the hero
 
-**Status:** planned — plan written. The hero background is still the static `public/triangle-grid.svg`
-(`components/Hero.tsx:17`), now the "Hero 6a refined" lattice from Claude Design; there is no
-client component and no animation yet.
-**Build doc:** `docs/plans/0002-hero-field-animation.md` (hardened, not executed yet).
+**Status:** planned — landed `74d44a1`..`a4fd5e3`: `components/HeroField.tsx`, `lib/field/*`, intro keyframes in `Hero.module.css`; awaiting the owner's review by eye.
+**Build doc:** `docs/plans/0002-hero-field-animation.md` (executed, landed `74d44a1`..`a4fd5e3`).
 
 ## Why
 
@@ -136,6 +134,13 @@ only live forms are drawn per frame.
   the browser at the three baseline sizes.
 - **Mobile density** — at 390 px wide the frame is smaller, so cells are smaller and dots denser;
   may need a lower dot opacity or fewer forms below 560 px.
+
+**Tuned values** (Card 4, `a4fd5e3`; every other starting value above was kept, including all CSS
+intro timings):
+
+- Busy pacing: 6 → 5 live forms.
+- Calm switch: 4000 → 3500 ms, so the field settles soon after the text lands (~2950 ms).
+- Below 560 px (`MOBILE_OVERRIDES`): dot opacity 0.35 → 0.22; busy 6 → 3 live forms; calm 3 → 2.
 
 ## Commit breakdown — SKETCH
 

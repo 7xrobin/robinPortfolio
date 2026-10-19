@@ -11,6 +11,7 @@ tags: [plan, status/planned]
 # 0002 — Plan: animated triangle field and intro sequence for the hero
 
 **Hardened:** 2026-10-19 against `dc8022c`
+**Executed:** landed `74d44a1`..`a4fd5e3`: `components/HeroField.tsx`, `lib/field/*`, intro keyframes in `Hero.module.css`; awaiting the owner's review by eye.
 
 **Spec:** `docs/specs/0002-hero-field-animation.md` — the decisions and their why. This file is
 only how they land.
