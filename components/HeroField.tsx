@@ -161,6 +161,11 @@ export default function HeroField() {
     if (!frameEl) return;
 
     const mobile = window.matchMedia(MOBILE_QUERY);
+    // Read `matches` once, then follow the change events. Chrome drops a change
+    // event when `matches` is read between the switch and the notification,
+    // so the hot paths read this flag instead.
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduced = reduce.matches;
     const dotsLayer = document.createElement("canvas");
     const glow = document.createElement("canvas");
     let glowSize = 0;
@@ -329,7 +334,7 @@ export default function HeroField() {
     // layer takes over. The time is absolute, so a late hydration joins the
     // ripple where it already is instead of restarting it.
     const drawDots = (now: number) => {
-      if (now >= st.cfg.intro.rippleEndMs || !st.lattice) {
+      if (reduced || now >= st.cfg.intro.rippleEndMs || !st.lattice) {
         ctx.drawImage(dotsLayer, 0, 0, st.width, st.height);
         return;
       }
@@ -367,9 +372,45 @@ export default function HeroField() {
     // resize while paused is picked up on resume.
     let dirty = true;
     let raf = 0;
+    let stillRaf = 0;
     const markDirty = () => {
       dirty = true;
+      if (reduced) scheduleStill();
     };
+
+    // Reduced motion: one static frame, every dot and a few filled forms held
+    // at rest, and no loop. It is redrawn only when the geometry changes.
+    const still = () => {
+      stillRaf = 0;
+      if (dirty) {
+        dirty = false;
+        measure();
+      }
+      const { calm } = st.cfg.pacing;
+      if (st.lattice && forms.length === 0) {
+        for (let a = 0; a < calm.liveForms * 10 && forms.length < calm.liveForms; a++) {
+          const form = place(
+            st.lattice,
+            forms,
+            { section: st, frame: st.frame, text: st.text },
+            { centre: st.rippleCentre, r: Infinity },
+            Math.random,
+            st.cfg,
+          );
+          if (form?.fill) forms.push(startForm(form, 0, calm, st));
+        }
+      }
+      ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, st.width, st.height);
+      drawDots(Infinity);
+      // Each form is shown fully traced, in the middle of its fill hold.
+      for (const f of forms) drawForm(f, f.start + (f.fillInEnd + f.fillHoldEnd) / 2);
+      ctx.globalAlpha = 1;
+    };
+    function scheduleStill() {
+      if (!stillRaf) stillRaf = requestAnimationFrame(still);
+    }
 
     const tick = () => {
       const now = performance.now();
@@ -388,7 +429,7 @@ export default function HeroField() {
     let onScreen = true;
     let pausedAt = -1;
     const sync = () => {
-      const visible = onScreen && document.visibilityState === "visible";
+      const visible = !reduced && onScreen && document.visibilityState === "visible";
       if (visible && !raf) {
         if (pausedAt >= 0) {
           const paused = performance.now() - pausedAt;
@@ -411,17 +452,39 @@ export default function HeroField() {
     io.observe(section);
     document.addEventListener("visibilitychange", sync);
 
+    // Switching either way drops the forms of the other mode: the loop's
+    // forms would freeze mid-stroke, and the still forms have no timeline.
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reduced = e.matches;
+      forms = [];
+      pausedAt = -1;
+      nextSpawn = 0;
+      if (reduced) {
+        sync();
+        scheduleStill();
+      } else {
+        cancelAnimationFrame(stillRaf);
+        stillRaf = 0;
+        sync();
+      }
+    };
+    reduce.addEventListener("change", onMotionChange);
+
     const ro = new ResizeObserver(markDirty);
     for (const el of [section, frameEl, logoEl, textEl]) if (el) ro.observe(el);
     document.fonts.ready.then(markDirty, () => {});
+    if (reduced) scheduleStill();
     sync();
 
     return () => {
       io.disconnect();
       document.removeEventListener("visibilitychange", sync);
+      reduce.removeEventListener("change", onMotionChange);
       ro.disconnect();
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(stillRaf);
       raf = 0;
+      stillRaf = 0;
     };
   }, []);
 

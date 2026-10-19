@@ -101,3 +101,13 @@
 @keyframes hero-rise {
   from { opacity: 0; transform: translateY(12px); }
 }
+
+/* Reduced motion: the hero is shown at rest, in its final state. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-frame,
+  .hero-portrait img,
+  .hero-hello,
+  .hero h1,
+  .hero-sub,
+  .hero-links a { animation: none; }
+}
