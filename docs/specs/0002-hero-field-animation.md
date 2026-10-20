@@ -3,15 +3,15 @@ number: "0002"
 type: spec
 slug: hero-field-animation
 title: Animated triangle field and intro sequence for the hero
-status: planned
+status: done
 created: 2026-10-19
 headline: Visitors now see the hero build itself — a dot lattice that draws, fills and erases triangles, then the portrait and the text arrive in order.
-tags: [spec, status/planned]
+tags: [spec, status/done]
 ---
 
 # 0002 — Animated triangle field and intro sequence for the hero
 
-**Status:** planned — landed `74d44a1`..`a4fd5e3`: `components/HeroField.tsx`, `lib/field/*`, intro keyframes in `Hero.module.css`; awaiting the owner's review by eye.
+**Status:** done — landed `74d44a1`..`a4fd5e3`; the intro keyframes in `components/Hero.module.css` stay live, the pen-drawn field was reverted (`039a0b9`) and redone by 0003.
 **Replaced in part:** the owner rejected the forms by eye on 2026-10-20 — the field motion is redone in `docs/specs/0003-hero-field-design-motion.md`; the intro sequence stays.
 **Build doc:** `docs/plans/0002-hero-field-animation.md` (executed, landed `74d44a1`..`a4fd5e3`).
 

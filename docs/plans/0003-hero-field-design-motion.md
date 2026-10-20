@@ -3,9 +3,9 @@ number: "0003"
 type: plan
 slug: hero-field-design-motion
 title: Animate the hero field on the design's own triangle structure
-status: planned
+status: done
 created: 2026-10-20
-tags: [plan, status/planned]
+tags: [plan, status/done]
 ---
 
 # 0003 — Plan: animate the hero field on the design's own triangle structure

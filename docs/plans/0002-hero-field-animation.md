@@ -3,9 +3,9 @@ number: "0002"
 type: plan
 slug: hero-field-animation
 title: Animated triangle field and intro sequence for the hero
-status: planned
+status: done
 created: 2026-10-19
-tags: [plan, status/planned]
+tags: [plan, status/done]
 ---
 
 # 0002 — Plan: animated triangle field and intro sequence for the hero

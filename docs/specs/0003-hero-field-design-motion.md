@@ -3,15 +3,15 @@ number: "0003"
 type: spec
 slug: hero-field-design-motion
 title: Animate the hero field on the design's own triangle structure
-status: planned
+status: done
 created: 2026-10-20
 headline: The hero background is the "Hero 6a refined" triangle field, and it moves — triangles form, dissolve and are traced again edge by edge, chains of new triangles grow out of the shape, colours shift, points light and fade, and every change returns to the design.
-tags: [spec, status/planned]
+tags: [spec, status/done]
 ---
 
 # 0003 — Animate the hero field on the design's own triangle structure
 
-**Status:** planned — landed `5abb666`..`5898868`: `scripts/extract-field.mjs` + `lib/field/design.ts`,
+**Status:** done — landed `5abb666`..`5898868`: `scripts/extract-field.mjs` + `lib/field/design.ts`,
 `lib/field/shape.ts`, `lib/field/changes.ts`, `components/HeroField.tsx`; awaiting the owner's review
 by eye.
 **Build doc:** `docs/plans/0003-hero-field-design-motion.md`.
