@@ -109,6 +109,20 @@
   animation: hero-fade var(--intro-fill-duration) var(--intro-ease) var(--intro-fill-delay) both;
 }
 
+/* The lit point on the trace's tip, on the trace's own timeline. Hidden at
+   rest. The offset path is the outline, in viewBox units. */
+.hero-frame-tip {
+  opacity: 0;
+  transform-box: view-box;
+  transform-origin: 0 0;
+  offset-path: path("M240,0 L480,415.7 L0,415.7 Z");
+  offset-rotate: 0deg;
+  offset-distance: 100%;
+  animation:
+    hero-frame-tip-move var(--intro-trace-duration) var(--intro-trace-ease) var(--intro-trace-delay) both,
+    hero-frame-tip-glint var(--intro-trace-duration) linear var(--intro-trace-delay) both;
+}
+
 /* Mask content: the trace reveals the outline apex -> right -> left -> apex.
    No dash at rest, so the closed outline keeps its joins; the dash lives only
    in the keyframes, with fill-mode backwards. */
@@ -193,6 +207,30 @@
   }
 }
 
+@keyframes hero-frame-tip-move {
+  from {
+    offset-distance: 0%;
+  }
+}
+
+@keyframes hero-frame-tip-glint {
+  0% {
+    opacity: 0;
+  }
+
+  2% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes hero-frame-glow {
   from {
     filter: drop-shadow(0 0 18px transparent);
@@ -228,6 +266,7 @@
   .hero-frame,
   .hero-frame-trace,
   .hero-frame-fill,
+  .hero-frame-tip,
   .hero-portrait img,
   .hero-hello,
   .hero h1,

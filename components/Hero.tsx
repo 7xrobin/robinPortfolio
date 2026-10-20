@@ -24,6 +24,10 @@ export default function Hero() {
                 <stop offset="0" stopColor="oklch(0.80 0.10 195)"></stop>
                 <stop offset="1" stopColor="var(--color-accent)"></stop>
               </linearGradient>
+              <radialGradient id="frame-tip-glow">
+                <stop offset="0" stopColor="#4fcdcd"></stop>
+                <stop offset="1" stopColor="#4fcdcd" stopOpacity="0"></stop>
+              </radialGradient>
               {/* The trace is drawn in the mask, in viewBox units, so one dash
                   length fits every frame size and the visible line keeps its
                   non-scaling 1.4 px stroke. */}
@@ -62,6 +66,11 @@ export default function Hero() {
               vectorEffect="non-scaling-stroke"
               mask="url(#frame-trace)"
             ></polygon>
+            {/* The lit point riding the trace's tip, sized like the field's. */}
+            <g className={styles["hero-frame-tip"]}>
+              <circle r="8.4" fill="url(#frame-tip-glow)"></circle>
+              <circle r="2.4" fill="#65d2d2"></circle>
+            </g>
           </svg>
           <div className={`${styles["hero-portrait"]} lighten`}>
             {/* Plain img: static export cannot optimise images, and the portrait CSS targets a plain img. */}
