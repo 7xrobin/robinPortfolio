@@ -33,7 +33,8 @@ colours shift and lit points fade in and out — always reverting, so the shape 
   039a0b9^:lib/field/config.ts` (`FIELD`, `fieldConfig`, `MOBILE_OVERRIDES`).
   `git show 039a0b9^:lib/field/forms.ts` has `inRect` / `inFrame` — copy those two, not the file.
 - 0002 marked its DOM targets with `data-field="logo" | "frame" | "text"` on the logo link,
-  `.hero-img` and `.hero-text`; `039a0b9` removed them.
+  `.hero-img` and `.hero-text`; `039a0b9` removed them. This plan uses `"nav"` (on `.hero-nav`)
+  instead of `"logo"` — see §Nav band.
 
 ## Changes by area
 
@@ -48,6 +49,14 @@ colours shift and lit points fade in and out — always reverting, so the shape 
   `#9184d9` over design (0,0)→(900,760), stroke opacity 0.55, width 0.8 du; lit node
   `#65d2d2`, glow `#4fcdcd` blur 4 du (0002's tuned values in its `config.ts`).
 
+**Nav band** — `lib/field/lattice.ts`, `components/HeroField.tsx`, `components/Hero.tsx`
+- Replace 0002's `cleanZone` (padded logo rect + ramp) with `navBand(y, navBottom, side, cfg)`:
+  0 for `y ≤ navBottom`, a smoothstep up to 1 over `cfg.navBand.rampCells` (start: 1) cells below.
+  It goes into each node's weight where `clean` went; an edge uses the min of its two nodes, a fill
+  the min of three, so nothing crosses into the bar.
+- `navBottom` is `.hero-nav`'s bottom (via `data-field="nav"`), re-measured on resize like the
+  frame. Config: `cleanZone` → `navBand: { rampCells: 1 }`.
+
 **Shape model** (new) — `lib/field/shape.ts`, pure, built once from `design.ts`
 - Closed triangles (517), each edge's count of closed triangles using it, boundary triangles
   (97: closed with an edge used once) with their outer edges, frontier cells (not closed, share
@@ -58,7 +67,7 @@ colours shift and lit points fade in and out — always reverting, so the shape 
   missing edges in, fill in with `formFillChance`), `recolour` (fill → other colour or
   opacity), `fill` / `unfill` (closed triangle), `light` / `dim` (lit node).
 - Rules from spec §Shape: caps, no live change on the same or adjacent cell, placement limits
-  (clean zone weight, `inFrame`, `inRect` text, `minChangeFade`), every change reverts.
+  (nav band weight must be 1, `inFrame`, `inRect` text, `minChangeFade`), every change reverts.
 - `sample(change, t)` → alpha (and colour for recolour) per element: fade in, hold, fade out.
 - An edge is drawn if the design has it and no live dissolve removes it, or a live form adds it.
 
@@ -113,14 +122,14 @@ commits:
               - write `lib/field/design.ts`; assert 841 edges / 165 fills / 189 lit nodes
   2. feat: add the hero field geometry and config
      touches: lib/field/lattice.ts, lib/field/config.ts
-     do:      - `lattice.ts` from `git show 039a0b9^:lib/field/lattice.ts`, plus `inRect` / `inFrame` copied from `git show 039a0b9^:lib/field/forms.ts`
+     do:      - `lattice.ts` from `git show 039a0b9^:lib/field/lattice.ts`, plus `inRect` / `inFrame` copied from `git show 039a0b9^:lib/field/forms.ts`; `cleanZone` replaced by `navBand` (this plan §Nav band)
               - `config.ts` from `git show 039a0b9^:lib/field/config.ts`, trimmed per this plan §Config (keep / drop lists; `changes` comes in Card 2)
   3. feat: draw the hero triangle field on a canvas
      touches: components/HeroField.tsx, components/Hero.tsx, components/Hero.module.css
      do:      - first save reference screenshots of the static page at the three sizes into the scratchpad
               - `HeroField.tsx` from `git show 039a0b9^:components/HeroField.tsx` without dots and forms: `renderDesign` (fills → edges → lit nodes, weighted, cached), ripple reveals elements by midpoint/centroid distance, reduced-motion still = the design
-              - `Hero.tsx`: `<HeroField />` first in the section, `data-field` markers back, `<img>` removed; `.hero-field` becomes the canvas rule (this plan §Canvas)
-done when:     re-running `node scripts/extract-field.mjs` leaves `git diff` empty; `npm run build` and `npm run lint` exit 0; reduced-motion captures at the three sizes match the reference screenshots by eye (same triangles, fills, lit nodes, same fade; only the logo clean zone may be emptier); a normal-motion capture series shows the ripple revealing the design; all commits landed
+              - `Hero.tsx`: `<HeroField />` first in the section, `data-field` markers back, `<img>` removed (`data-field="nav"` on `.hero-nav`, not on the logo); `.hero-field` becomes the canvas rule (this plan §Canvas)
+done when:     re-running `node scripts/extract-field.mjs` leaves `git diff` empty; `npm run build` and `npm run lint` exit 0; reduced-motion captures at the three sizes match the reference screenshots by eye (same triangles, fills, lit nodes, same fade; nothing above the nav bar — at 390×844 the triangles that touch the logo today are gone, faded in below the bar); a normal-motion capture series shows the ripple revealing the design; all commits landed
 
 ### Card 2 — triangles form and dissolve on the edge, colours and points change
 precondition:  Card 1 landed — `HeroField` draws `DESIGN_*` from `lib/field/design.ts` through a cached layer; `lib/field/lattice.ts` has `inRect` / `inFrame`
@@ -142,4 +151,4 @@ commits:
   4. docs(specs): record 0003 landed
      touches: docs/specs/README.md, docs/specs/0003-hero-field-design-motion.md
      do:      - 0003 row and spec **Status:** → landed `<first>`..`<last>`, awaiting the owner's review by eye (status stays `planned`, as 0002 did)
-done when:     `npm run build` and `npm run lint` exit 0; captures at 3 s, 6 s and 12 s at the three sizes each read as the design with a few edge triangles gone or added, some fills recoloured, some points changed — never a triangle away from the shape, never a hole in the body, nothing in the logo zone, the frame or the text; a hidden tab stops the loop; reduced motion shows the design still; all commits landed
+done when:     `npm run build` and `npm run lint` exit 0; captures at 3 s, 6 s and 12 s at the three sizes each read as the design with a few edge triangles gone or added, some fills recoloured, some points changed — never a triangle away from the shape, never a hole in the body, nothing in the nav bar, the frame or the text; a hidden tab stops the loop; reduced motion shows the design still; all commits landed

@@ -64,9 +64,14 @@ back. What the owner wants (2026-10-20, two messages):
   hold. Caps on what differs from the design at any moment (starting values: 8 boundary changes,
   12 % of fills, 15 % of lit nodes). No two live changes on the same or an adjacent cell. So a
   screenshot at any moment reads as the design.
-- **Placement limits** (from 0002): nothing in the logo clean zone (padded logo rect, with a soft
-  ramp), no change inside the frame triangle or the text rect, no change where the fade is very
-  low.
+- **The field stops before the nav bar** (owner's decision, 2026-10-20 — "to not cover my
+  logo"). Nothing is drawn above the bottom of `.hero-nav` (measured from the DOM; 88 px, 72 px
+  on phones). Below it the field fades in over ~1 cell, so it has no hard cut. This replaces
+  0002's padded logo rect: the whole bar is clean, the logo and the About link always sit on the
+  plain background. Today's static field already reaches the logo on phones (390 px: the field
+  starts ~15 px from the top), so this is a visible change there.
+- **Placement limits** (from 0002): no change in the nav band or its ramp, inside the frame
+  triangle or the text rect, or where the fade is very low.
 - **Kept from 0002:** the canvas covers the whole section; geometry from the measured frame
   (`side = frameWidth / 12`); busy-then-calm pacing; pause off screen or on a hidden tab; the
   intro ripple from the frame centre, now revealing the design's elements; the CSS intro
