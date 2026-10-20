@@ -4,8 +4,11 @@
   /* Intro timings. They are CSS so the intro runs without JS. Base rules
      hold the final state; the hidden state lives only in each keyframe's
      `from`, with fill-mode both. */
-  --intro-frame-delay: 1100ms;
-  --intro-frame-duration: 600ms;
+  --intro-trace-delay: 300ms;
+  --intro-trace-duration: 900ms;
+  --intro-trace-ease: linear;
+  --intro-fill-delay: 1200ms;
+  --intro-fill-duration: 450ms;
   --intro-portrait-delay: 1450ms;
   --intro-portrait-duration: 700ms;
   --intro-text-delay: 2000ms;
@@ -99,8 +102,18 @@
   height: 100%;
   overflow: visible;
   filter: drop-shadow(0 0 18px color-mix(in srgb, oklch(0.74 0.10 210) 50%, transparent));
-  transform-origin: 50% 0;
-  animation: hero-frame-in var(--intro-frame-duration) var(--intro-ease) var(--intro-frame-delay) both;
+  animation: hero-frame-glow var(--intro-fill-duration) var(--intro-ease) var(--intro-fill-delay) both;
+}
+
+.hero-frame-fill {
+  animation: hero-fade var(--intro-fill-duration) var(--intro-ease) var(--intro-fill-delay) both;
+}
+
+/* Mask content: the trace reveals the outline apex -> right -> left -> apex.
+   No dash at rest, so the closed outline keeps its joins; the dash lives only
+   in the keyframes, with fill-mode backwards. */
+.hero-frame-trace {
+  animation: hero-frame-trace var(--intro-trace-duration) var(--intro-trace-ease) var(--intro-trace-delay) backwards;
 }
 
 .hero-portrait {
@@ -167,10 +180,28 @@
 }
 
 /* Intro keyframes: each starts hidden and ends on the visible base state. */
-@keyframes hero-frame-in {
+@keyframes hero-frame-trace {
+  from {
+    stroke-dasharray: 1440 1440;
+    stroke-dashoffset: 1440;
+    visibility: hidden;
+  }
+
+  to {
+    stroke-dasharray: 1440 1440;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hero-frame-glow {
+  from {
+    filter: drop-shadow(0 0 18px transparent);
+  }
+}
+
+@keyframes hero-fade {
   from {
     opacity: 0;
-    transform: scale(0.92);
   }
 }
 
@@ -195,6 +226,8 @@
 @media (prefers-reduced-motion: reduce) {
 
   .hero-frame,
+  .hero-frame-trace,
+  .hero-frame-fill,
   .hero-portrait img,
   .hero-hello,
   .hero h1,
