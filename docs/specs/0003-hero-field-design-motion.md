@@ -5,14 +5,15 @@ slug: hero-field-design-motion
 title: Animate the hero field on the design's own triangle structure
 status: planned
 created: 2026-10-20
-headline: The hero background is the "Hero 6a refined" triangle field, and it breathes — triangles form and dissolve along the edge of the shape, colours shift, points light and fade, the body of the shape never moves.
+headline: The hero background is the "Hero 6a refined" triangle field, and it moves — triangles form, dissolve and are traced again edge by edge, chains of new triangles grow out of the shape, colours shift, points light and fade, and every change returns to the design.
 tags: [spec, status/planned]
 ---
 
 # 0003 — Animate the hero field on the design's own triangle structure
 
-**Status:** planned — plan written, not built. The hero shows the static `public/triangle-grid.svg`
-again (`039a0b9` reverted the 0002 canvas); the intro keyframes from 0002 stay.
+**Status:** planned — landed `5abb666`..`5898868`: `scripts/extract-field.mjs` + `lib/field/design.ts`,
+`lib/field/shape.ts`, `lib/field/changes.ts`, `components/HeroField.tsx`; awaiting the owner's review
+by eye.
 **Build doc:** `docs/plans/0003-hero-field-design-motion.md`.
 
 ## Why
@@ -29,10 +30,12 @@ back. What the owner wants (2026-10-20, two messages):
 
 ## The design, measured
 
-`public/triangle-grid.svg` (1280 × 760, cell 40, apex on node (320, 138.6)) is:
+`public/triangle-grid.svg` (1280 × 760, cell 40) is drawn on a lattice whose node (320, 138.6)
+sits at the frame's left-corner x and apex y; the frame apex itself is design (560, 138.6). It is:
 
-- **841 edges** in one stroke path. They close **517 triangles** (cells with all 3 edges). One
-  edge belongs to no closed triangle.
+- **841 edges** in one stroke path (inside the design box). Beside them, 3 short stubs cross the
+  box's left edge (`DESIGN_STUBS`): static decoration, drawn clipped, not part of the shape. They
+  close **517 triangles** (cells with all 3 edges). One edge belongs to no closed triangle.
 - **97 boundary triangles** — closed triangles with at least one edge no other closed triangle
   shares. Together they are the outline of the shape.
 - **110 open triangles** around the shape — cells with 1 or 2 of their edges drawn, the ragged
@@ -42,16 +45,27 @@ back. What the owner wants (2026-10-20, two messages):
 - **189 lit nodes** (radius 1.6, glow).
 - A horizontal fade mask (1 → 0.8 at 0.45 → 0.2 at 0.75).
 
+**Dropped by the owner (2026-10-20):** a small cluster right of the shape, at design x 900–1000,
+sat behind the hero text — 11 edges, 1 fill, 4 lit nodes. The extract drops everything right of
+design x 880 (`RIGHT_LIMIT`), so the data holds **830 edges, 164 fills, 185 lit nodes**, closing
+**512 triangles** with **93 boundary triangles**.
+
 ## Shape — the decisions
 
 - **The base state is the design, element for element.** The canvas draws exactly what the SVG
   draws. The SVG is extracted once into lattice coordinates (edges as node pairs, fills as cell +
   colour + opacity, lit nodes as nodes) and committed as data, with the script that rebuilds it.
-- **Only the edge of the shape moves.** Three kinds of change, all on the design's lattice:
+- **The edge of the shape moves, and the body is rebuilt.** Changes on the design's lattice:
   - **Dissolve** — a boundary triangle fades away: its outer edges (the ones no other closed
     triangle uses) and its fill fade out. Inner edges stay, so the body never gets a hole.
-  - **Form** — an empty or open cell that touches the shape completes: its missing edges fade
-    in, and it may take a fill. It never appears away from the shape.
+  - **Form** — an empty or open cell that touches the shape completes: its missing edges are
+    drawn, and it may take a fill. A form may grow a chain of up to 3 cells out of the shape, each
+    sharing an edge with the last, so new connections reach a little past the outline.
+  - **Rebuild** (owner, 2026-10-20 — "the triangles recreate, new edges and connections") — a
+    closed triangle anywhere in the body erases its edges one by one and draws them back. Its
+    corners stay lit, so the body opens for a moment and closes again.
+  - **Edges are traced, not faded.** A new edge grows from one node to the other with a lit point
+    on its tip and is brighter while it moves; a removed edge shrinks back the same way.
   - Dissolve and form run side by side, so the outline seems to shift a little — one triangle
     gone here, one new there.
 - **Colours shift across the whole shape.** A fill cross-fades to another palette colour or
@@ -61,8 +75,9 @@ back. What the owner wants (2026-10-20, two messages):
   nodes go dark for a while and come back. A node on a dissolving triangle's outer corner dims
   with it.
 - **The structure is kept by rules, not by hope.** Every change goes back to the design after its
-  hold. Caps on what differs from the design at any moment (starting values: 8 boundary changes,
-  12 % of fills, 15 % of lit nodes). No two live changes on the same or an adjacent cell. So a
+  hold. Caps on what differs from the design at any moment (14 boundary changes, 6 rebuilds,
+  12 % of fills, 15 % of lit nodes; half the boundary and rebuild caps on phones). Rate: 7
+  changes/s busy, 3.5 calm (half on phones). No two live changes on the same or an adjacent cell. So a
   screenshot at any moment reads as the design.
 - **The field stops before the nav bar** (owner's decision, 2026-10-20 — "to not cover my
   logo"). Nothing is drawn above the bottom of `.hero-nav` (measured from the DOM; 88 px, 72 px
