@@ -1,19 +1,20 @@
 import styles from "./Hero.module.css";
-import HeroField from "./HeroField";
 
 export default function Hero() {
   return (
     <section id="top" className={styles.hero} data-screen-label="01 Hero">
-      <HeroField />
       <div className={styles["hero-inner"]}>
         <nav className={styles["hero-nav"]} aria-label="Main">
-          <a href="#top" className={styles["hero-logo"]} data-field="logo" aria-label="Robin — home"></a>
+          <a href="#top" className={styles["hero-logo"]} aria-label="Robin — home"></a>
           <div className={styles["hero-links"]}>
             <a href="#about">About</a>
           </div>
         </nav>
 
-        <div className={styles["hero-img"]} data-field="frame">
+        <div className={styles["hero-img"]}>
+          {/* Plain img: static export cannot optimise images, and the field is positioned by CSS. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className={styles["hero-field"]} src="/triangle-grid.svg" alt="" aria-hidden="true" />
           <svg
             className={styles["hero-frame"]}
             viewBox="0 0 100 100"
@@ -42,7 +43,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className={styles["hero-text"]} data-field="text">
+        <div className={styles["hero-text"]}>
           <p className={styles["hero-hello"]}>Hi, I’m Robin Oliveira.</p>
           <h1>
             I build digital products,
