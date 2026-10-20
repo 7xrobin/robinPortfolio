@@ -45,16 +45,14 @@ export default function Hero() {
         <div className={styles["hero-text"]} data-field="text">
           <p className={styles["hero-hello"]}>Hi, I’m Robin Oliveira.</p>
           <h1>
-            I build digital products,
-            <br />
-            from plan to <em>delivery</em>.
+            Shaping digital solutions, from first idea to <em>release</em>.
           </h1>
           <p className={styles["hero-sub"]}>
-            Engineer and product builder working where AI meets real software — turning models into
-            tools people actually use, from the first prototype to production.
+            I bring business and design thinking to every stage of the build, so what ships is smart, usable, and impactful.
+            <br />Where AI engineering meets user experience.
           </p>
         </div>
       </div>
-    </section>
+    </section >
   );
 }

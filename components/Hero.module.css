@@ -113,8 +113,8 @@
 /* The reveal goes on the img: .hero-portrait's clip-path is the triangle. */
 .hero-portrait img {
   position: absolute;
-  width: 92%;
-  left: 4%;
+  width: 70%;
+  left: 17%;
   top: 0%;
   max-width: none;
   animation: hero-portrait-in var(--intro-portrait-duration) var(--intro-ease) var(--intro-portrait-delay) both;
