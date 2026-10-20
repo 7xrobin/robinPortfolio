@@ -11,6 +11,7 @@ tags: [plan, status/planned]
 # 0004 — Plan: trace the portrait frame edge by edge and fade the portrait in
 
 **Hardened:** 2026-10-20 against `6913fac`
+**Executed:** landed `2d702c2`..`371c958`: mask trace, `offset-path` tip, fill/glow and portrait fades in `components/Hero.tsx` + `Hero.module.css`; Safari is an owner check (not drivable from the session); awaiting the owner's review by eye.
 
 **Spec:** `docs/specs/0004-hero-frame-trace-intro.md` — the decisions and their why. This file is
 only how they land.

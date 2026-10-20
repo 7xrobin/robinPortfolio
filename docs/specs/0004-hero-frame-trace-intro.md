@@ -11,13 +11,13 @@ tags: [spec, status/planned]
 
 # 0004 — Trace the portrait frame edge by edge and fade the portrait in
 
-**Status:** planned — plan written, not built. Today the whole frame SVG fades and scales in from its apex
+**Status:** planned — landed `2d702c2`..`371c958`, awaiting the owner's review by eye. Before it, today the whole frame SVG fades and scales in from its apex
 (`hero-frame-in`, `opacity 0 → 1` + `scale(0.92 → 1)`, 600 ms starting at 1100 ms) and the portrait
 image is uncovered from top to bottom (`hero-portrait-in`, a `clip-path: inset()` wipe on
 `.hero-portrait img`, 700 ms starting at 1450 ms), both in `components/Hero.module.css`
 (`.hero-frame` :95–104, `.hero-portrait img` :114–121, keyframes :170–185).
 **Hardened:** 2026-10-20 against `8f802b7`
-**Build doc:** `docs/plans/0004-hero-frame-trace-intro.md` — plan written, not built; run `/exec docs/plans/0004-hero-frame-trace-intro.md`.
+**Build doc:** `docs/plans/0004-hero-frame-trace-intro.md` — landed `2d702c2`..`371c958`, awaiting the owner's review by eye.
 
 ## Why
 
