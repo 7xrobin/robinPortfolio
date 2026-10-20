@@ -12,6 +12,7 @@ tags: [spec, status/planned]
 # 0002 — Animated triangle field and intro sequence for the hero
 
 **Status:** planned — landed `74d44a1`..`a4fd5e3`: `components/HeroField.tsx`, `lib/field/*`, intro keyframes in `Hero.module.css`; awaiting the owner's review by eye.
+**Replaced in part:** the owner rejected the forms by eye on 2026-10-20 — the field motion is redone in `docs/specs/0003-hero-field-design-motion.md`; the intro sequence stays.
 **Build doc:** `docs/plans/0002-hero-field-animation.md` (executed, landed `74d44a1`..`a4fd5e3`).
 
 ## Why
