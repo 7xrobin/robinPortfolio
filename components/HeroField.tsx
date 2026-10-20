@@ -1,0 +1,596 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import styles from "./Hero.module.css";
+import { DESIGN, MOBILE_QUERY, fieldConfig, type FieldConfig } from "@/lib/field/config";
+import { DESIGN_EDGES, DESIGN_FILLS, DESIGN_LIT, DESIGN_STUBS } from "@/lib/field/design";
+import {
+  eligible,
+  excluded,
+  pickChange,
+  sample,
+  type Change,
+  type Eligible,
+  type Excluded,
+} from "@/lib/field/changes";
+import { designShape, edgeKey, nodeKey, type EdgeKey } from "@/lib/field/shape";
+import {
+  cellNodes,
+  designToSection,
+  type CellId,
+  fade,
+  frameCentroid,
+  latticeFrame,
+  navBand,
+  nodePosition,
+  type LatticeFrame,
+  type Point,
+  type Rect,
+} from "@/lib/field/lattice";
+
+/** Rect of `el` relative to `base`, in CSS px. */
+function relativeRect(el: Element, base: DOMRect): Rect {
+  const r = el.getBoundingClientRect();
+  return { left: r.left - base.left, top: r.top - base.top, width: r.width, height: r.height };
+}
+
+type NodeKey = readonly [r: number, c: number];
+
+/** A design node placed in the section. */
+interface PlacedNode extends Point {
+  fade: number;
+  band: number;
+}
+
+interface PlacedEdge {
+  key: EdgeKey;
+  a: Point;
+  b: Point;
+  /** fade (mean of the two ends) × nav band (min of the two ends). */
+  weight: number;
+  /** Distance of the midpoint to the ripple centre. */
+  dist: number;
+}
+
+interface PlacedFill {
+  cell: CellId;
+  p: readonly [Point, Point, Point];
+  colour: number;
+  opacity: number;
+  /** fade (mean of the three corners) × nav band (min of the three). */
+  weight: number;
+  /** Distance of the centroid to the ripple centre. */
+  dist: number;
+}
+
+interface PlacedLit extends Point {
+  key: string;
+  weight: number;
+  dist: number;
+}
+
+interface FieldState {
+  width: number;
+  height: number;
+  dpr: number;
+  cfg: FieldConfig;
+  g: LatticeFrame | null;
+  edges: PlacedEdge[];
+  /** Edges crossing the design's left edge; drawn clipped to the box. */
+  stubs: PlacedEdge[];
+  /** The design's 1280 × 760 box in section px; nothing is drawn outside it. */
+  box: Rect;
+  fills: PlacedFill[];
+  lit: PlacedLit[];
+  /** Ripple radius at which the farthest section corner is fully revealed. */
+  rippleMax: number;
+  /** Places a node; set by place(). */
+  at: (k: NodeKey) => PlacedNode;
+  /** Where changes may go in this layout. */
+  elig: Eligible | null;
+}
+
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/**
+ * Places every design element in the section: positions, weights and ripple
+ * distances. The weights fold in the design's horizontal fade and the nav
+ * band, so nothing reaches into the nav bar.
+ */
+function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
+  // The static field put design point (320, 138.6), node (0, 0) of the design
+  // data, on the frame's left corner x and apex y — not on the apex, which is
+  // design (560, 138.6), six cells right. Anchoring the lattice half a frame
+  // to the left lands every element where the SVG drew it.
+  const g = latticeFrame({ ...frame, left: frame.left - frame.width / 2 });
+  st.g = g;
+  const centre = frameCentroid(frame);
+  const at = ([r, c]: NodeKey): PlacedNode => {
+    const p = nodePosition(g, r, c);
+    return { ...p, fade: fade(p.x, g, st.cfg.fade), band: navBand(p.y, navBottom, g.side, st.cfg.navBand) };
+  };
+  st.at = at;
+  const dist = (x: number, y: number) => Math.hypot(x - centre.x, y - centre.y);
+  const edge = ([ka, kb]: readonly [NodeKey, NodeKey]): PlacedEdge => {
+    const a = at(ka);
+    const b = at(kb);
+    return {
+      key: edgeKey(ka, kb),
+      a,
+      b,
+      weight: ((a.fade + b.fade) / 2) * Math.min(a.band, b.band),
+      dist: dist((a.x + b.x) / 2, (a.y + b.y) / 2),
+    };
+  };
+  st.edges = DESIGN_EDGES.map(edge);
+  st.stubs = DESIGN_STUBS.map(edge);
+  const b0 = designToSection(g, 0, 0);
+  const b1 = designToSection(g, DESIGN.width, DESIGN.height);
+  st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
+  st.fills = DESIGN_FILLS.map((f) => {
+    const [p, q, r] = cellNodes(f.cell).map(at);
+    return {
+      cell: f.cell,
+      p: [p, q, r] as const,
+      colour: f.colour,
+      opacity: f.opacity,
+      weight: ((p.fade + q.fade + r.fade) / 3) * Math.min(p.band, q.band, r.band),
+      dist: dist((p.x + q.x + r.x) / 3, (p.y + q.y + r.y) / 3),
+    };
+  });
+  st.lit = DESIGN_LIT.map((k) => {
+    const n = at(k);
+    return { key: nodeKey(k), x: n.x, y: n.y, weight: n.fade * n.band, dist: dist(n.x, n.y) };
+  });
+  const soft = st.cfg.intro.rippleSoftCells * g.side;
+  st.rippleMax =
+    Math.max(
+      Math.hypot(centre.x, centre.y),
+      Math.hypot(st.width - centre.x, centre.y),
+      Math.hypot(centre.x, st.height - centre.y),
+      Math.hypot(st.width - centre.x, st.height - centre.y),
+    ) + soft;
+  // The placement limits use the real frame (the portrait triangle), not
+  // the shifted lattice anchor.
+  st.elig = eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
+}
+
+/**
+ * Renders one lit node with its glow into `sprite`, at `dpr`. Returns the
+ * sprite's size in CSS px; it is drawn centred on the node.
+ */
+function renderGlow(sprite: HTMLCanvasElement, st: FieldState): number {
+  const s = st.g?.s ?? 1;
+  const { radius, color, glowBlur, glowColor } = st.cfg.litNode;
+  const r = radius * s;
+  const blur = glowBlur * s;
+  const size = 2 * (r + 2 * blur + 1);
+  sprite.width = sprite.height = Math.max(1, Math.ceil(size * st.dpr));
+  const ctx = sprite.getContext("2d");
+  if (!ctx) return size;
+  ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  // shadowBlur ignores the transform, so it is set in device pixels.
+  ctx.shadowBlur = blur * st.dpr;
+  ctx.shadowColor = glowColor;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+  ctx.fill();
+  return size;
+}
+
+/** The design's line gradient, made on `ctx` (a gradient belongs to its context). */
+function lineGradient(ctx: CanvasRenderingContext2D, st: FieldState): CanvasGradient | string {
+  const { lines } = st.cfg;
+  if (!st.g) return lines.stops[0];
+  const p0 = designToSection(st.g, lines.from[0], lines.from[1]);
+  const p1 = designToSection(st.g, lines.to[0], lines.to[1]);
+  const grad = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+  lines.stops.forEach((c, i) => grad.addColorStop(i / Math.max(1, lines.stops.length - 1), c));
+  return grad;
+}
+
+const NO_SKIP: Excluded = { edges: new Set(), fills: new Set(), lit: new Set() };
+
+/** Clips `ctx` to the design box, like the SVG's own viewport. */
+function clipToBox(ctx: CanvasRenderingContext2D, st: FieldState) {
+  ctx.beginPath();
+  ctx.rect(st.box.left, st.box.top, st.box.width, st.box.height);
+  ctx.clip();
+}
+
+function fillTriangle(ctx: CanvasRenderingContext2D, [p, q, r]: readonly [Point, Point, Point]) {
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  ctx.lineTo(q.x, q.y);
+  ctx.lineTo(r.x, r.y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
+ * Draws the design's fills onto `ctx` (already transformed to CSS px), each
+ * at its weight times `reveal(dist)`, leaving out the cells in `skip`.
+ */
+function renderFills(
+  ctx: CanvasRenderingContext2D,
+  st: FieldState,
+  reveal: (dist: number) => number,
+  skip: Excluded,
+) {
+  if (!st.g) return;
+  const { fills } = st.cfg;
+  ctx.save();
+  clipToBox(ctx, st);
+  for (const f of st.fills) {
+    if (skip.fills.has(f.cell)) continue;
+    const a = f.opacity * f.weight * reveal(f.dist);
+    if (a <= 0.001) continue;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = fills.palette[f.colour];
+    fillTriangle(ctx, f.p);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Draws the design's edges, the clipped stubs and the lit nodes onto `ctx`,
+ * each at its weight times `reveal(dist)`, leaving out what `skip` names.
+ * The stubs show only their half inside the box, and the two lit nodes left
+ * of it stay hidden.
+ */
+function renderLines(
+  ctx: CanvasRenderingContext2D,
+  st: FieldState,
+  glow: HTMLCanvasElement,
+  glowSize: number,
+  reveal: (dist: number) => number,
+  skip: Excluded,
+) {
+  if (!st.g) return;
+  const { lines } = st.cfg;
+  ctx.save();
+  clipToBox(ctx, st);
+  ctx.strokeStyle = lineGradient(ctx, st);
+  ctx.lineWidth = lines.width * st.g.s;
+  const stroke = (e: PlacedEdge) => {
+    const a = lines.opacity * e.weight * reveal(e.dist);
+    if (a <= 0.001) return;
+    ctx.globalAlpha = a;
+    ctx.beginPath();
+    ctx.moveTo(e.a.x, e.a.y);
+    ctx.lineTo(e.b.x, e.b.y);
+    ctx.stroke();
+  };
+  for (const e of st.edges) if (!skip.edges.has(e.key)) stroke(e);
+  for (const e of st.stubs) stroke(e);
+
+  const half = glowSize / 2;
+  for (const n of st.lit) {
+    if (skip.lit.has(n.key)) continue;
+    const a = n.weight * reveal(n.dist);
+    if (a <= 0.001) continue;
+    ctx.globalAlpha = a;
+    ctx.drawImage(glow, n.x - half, n.y - half, glowSize, glowSize);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The hero's triangle field: the design's own triangles, fills and lit nodes
+ * on a canvas, anchored on the frame, faded to the right like the design and
+ * kept below the nav bar. The intro ripple reveals it from the frame
+ * centroid; after it, triangles dissolve and form along the edge of the
+ * shape, chains of new triangles grow out of it, triangles in the body are
+ * erased and traced again edge by edge, fills change colour and points light and fade, each going back to
+ * the design (lib/field/changes.ts).
+ */
+export default function HeroField() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const section = canvas?.parentElement;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !section || !ctx) return;
+
+    const pick = (name: string) => section.querySelector<HTMLElement>(`[data-field="${name}"]`);
+    const frameEl = pick("frame");
+    const navEl = pick("nav");
+    const textEl = pick("text");
+    if (!frameEl) return;
+
+    const mobile = window.matchMedia(MOBILE_QUERY);
+    // Read `matches` once, then follow the change events. Chrome drops a change
+    // event when `matches` is read between the switch and the notification,
+    // so the hot paths read this flag instead.
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduced = reduce.matches;
+    // The design is cached in two layers, fills under lines, so a changing
+    // fill is drawn between them as the design orders it.
+    const fillLayer = document.createElement("canvas");
+    const lineLayer = document.createElement("canvas");
+    const glow = document.createElement("canvas");
+    let glowSize = 0;
+    let lineStyle: CanvasGradient | string = "#000";
+    const st: FieldState = {
+      width: 0,
+      height: 0,
+      dpr: 1,
+      cfg: fieldConfig(mobile.matches),
+      g: null,
+      edges: [],
+      stubs: [],
+      box: { left: 0, top: 0, width: 0, height: 0 },
+      fills: [],
+      lit: [],
+      rippleMax: 0,
+      at: () => ({ x: 0, y: 0, fade: 0, band: 0 }),
+      elig: null,
+    };
+
+    // Live changes, timed on the field clock: it only advances while the loop
+    // runs, so a paused field resumes where it stopped.
+    let live: Change[] = [];
+    let clock = 0;
+    let lastNow = -1;
+    let due = 0;
+    /** The cached layers no longer match the live changes. */
+    let layersDirty = true;
+
+    const buildLayers = () => {
+      layersDirty = false;
+      const skip = live.length ? excluded(live) : NO_SKIP;
+      for (const [layer, part] of [
+        [fillLayer, "fills"],
+        [lineLayer, "lines"],
+      ] as const) {
+        layer.width = canvas.width;
+        layer.height = canvas.height;
+        const lctx = layer.getContext("2d");
+        if (!lctx) continue;
+        lctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+        lctx.clearRect(0, 0, st.width, st.height);
+        if (part === "fills") renderFills(lctx, st, () => 1, skip);
+        else renderLines(lctx, st, glow, glowSize, () => 1, skip);
+      }
+    };
+
+    const measure = () => {
+      const base = section.getBoundingClientRect();
+      st.cfg = fieldConfig(mobile.matches);
+      st.width = base.width;
+      st.height = base.height;
+      st.dpr = Math.min(window.devicePixelRatio || 1, st.cfg.maxDpr);
+      const frame = relativeRect(frameEl, base);
+      const nav = navEl ? relativeRect(navEl, base) : null;
+      const text = textEl ? relativeRect(textEl, base) : null;
+
+      canvas.width = Math.max(1, Math.round(st.width * st.dpr));
+      canvas.height = Math.max(1, Math.round(st.height * st.dpr));
+
+      if (frame.width > 0) {
+        place(st, frame, nav ? nav.top + nav.height : null, text);
+      } else {
+        st.g = null;
+        st.elig = null;
+      }
+      glowSize = renderGlow(glow, st);
+      lineStyle = lineGradient(ctx, st);
+
+      // Live changes were placed for the old layout: drop them, the design
+      // is drawn whole again.
+      live = [];
+      buildLayers();
+    };
+
+    const rippleSoft = () => Math.max(1e-3, st.cfg.intro.rippleSoftCells * (st.g?.side ?? 0));
+    /** Ripple radius at `now`: 0 before the window, rippleMax after it. */
+    const rippleAt = (now: number) => {
+      const { rippleStartMs, rippleEndMs } = st.cfg.intro;
+      return st.rippleMax * clamp01((now - rippleStartMs) / (rippleEndMs - rippleStartMs));
+    };
+
+    /** Draws the live changes' fills (between the layers) or lines and points (on top). */
+    const drawChanges = (part: "fills" | "lines") => {
+      if (!st.g || !live.length) return;
+      const { lines, fills } = st.cfg;
+      for (const ch of live) {
+        const s = sample(ch, clock, fills.palette);
+        if (part === "fills") {
+          if (!s.fill) continue;
+          const [p, q, r] = cellNodes(s.fill.cell).map(st.at);
+          const w = ((p.fade + q.fade + r.fade) / 3) * Math.min(p.band, q.band, r.band);
+          const a = s.fill.opacity * w;
+          if (a <= 0.001) continue;
+          ctx.globalAlpha = a;
+          ctx.fillStyle = s.fill.colour;
+          fillTriangle(ctx, [p, q, r]);
+          continue;
+        }
+        ctx.strokeStyle = lineStyle;
+        ctx.lineWidth = lines.width * st.g.s;
+        const half = glowSize / 2;
+        for (const e of s.edges) {
+          if (e.drawn <= 0.001) continue;
+          const a = st.at(e.a);
+          const b = st.at(e.b);
+          const w = ((a.fade + b.fade) / 2) * Math.min(a.band, b.band);
+          const tip = { x: a.x + (b.x - a.x) * e.drawn, y: a.y + (b.y - a.y) * e.drawn };
+          // An edge in motion is brighter than the design's, settling back to
+          // the line opacity at both ends of its trace.
+          const lift = Math.sin(Math.PI * e.drawn);
+          ctx.globalAlpha = w * (lines.opacity + (1 - lines.opacity) * lift);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(tip.x, tip.y);
+          ctx.stroke();
+          // A lit point rides the tip while the edge grows or shrinks: the
+          // connection being made or undone.
+          if (e.drawn < 0.999) {
+            const size = glowSize * 1.5;
+            ctx.globalAlpha = w;
+            ctx.drawImage(glow, tip.x - size / 2, tip.y - size / 2, size, size);
+          }
+        }
+        for (const l of s.lit) {
+          const n = st.at(l.node);
+          const alpha = n.fade * n.band * l.alpha;
+          if (alpha <= 0.001) continue;
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(glow, n.x - half, n.y - half, glowSize, glowSize);
+        }
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    // While the ripple grows the design is drawn element by element, each
+    // faded in by the ripple's soft edge as it passes the element's midpoint or
+    // centroid; once it has passed every corner, the cached layers take over,
+    // with the live changes drawn on them. The time is absolute, so a late
+    // hydration joins the ripple where it already is instead of restarting it.
+    const draw = (now: number) => {
+      ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, st.width, st.height);
+      if (reduced || now >= st.cfg.intro.rippleEndMs) {
+        ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
+        drawChanges("fills");
+        ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
+        drawChanges("lines");
+        return;
+      }
+      const r = rippleAt(now);
+      if (r <= 0) return;
+      const soft = rippleSoft();
+      const reveal = (d: number) => {
+        const e = clamp01((r - d) / soft);
+        return e * e * (3 - 2 * e);
+      };
+      renderFills(ctx, st, reveal, NO_SKIP);
+      renderLines(ctx, st, glow, glowSize, reveal, NO_SKIP);
+    };
+
+    /**
+     * Advances the changes by `dt` ms of field time: ends the ones that are
+     * over, then starts new ones at the busy rate until pacing.calmAtMs and
+     * the calm rate after it. A start or an end marks the layers for one
+     * rebuild this frame.
+     */
+    const step = (now: number, dt: number) => {
+      clock += dt;
+      const before = live.length;
+      live = live.filter((ch) => ch.end > clock);
+      if (live.length !== before) layersDirty = true;
+      if (!st.elig) return;
+      const pace = now < st.cfg.pacing.calmAtMs ? st.cfg.changes.busy : st.cfg.changes.calm;
+      due += (dt / 1000) * pace.perSecond;
+      while (due >= 1) {
+        due -= 1;
+        const ch = pickChange(live, designShape(), st.elig, st.cfg, pace, Math.random, clock);
+        if (ch) {
+          live.push(ch);
+          layersDirty = true;
+        }
+      }
+    };
+
+    // Resizes only mark the field dirty; the next frame re-measures once, so a
+    // resize while paused is picked up on resume.
+    let dirty = true;
+    let raf = 0;
+    let stillRaf = 0;
+    const markDirty = () => {
+      dirty = true;
+      if (reduced) scheduleStill();
+    };
+
+    // Reduced motion: one static frame, the design at rest, and no loop. It is
+    // redrawn only when the geometry changes.
+    const still = () => {
+      stillRaf = 0;
+      if (dirty) {
+        dirty = false;
+        measure();
+      }
+      if (layersDirty) buildLayers();
+      draw(Infinity);
+    };
+    function scheduleStill() {
+      if (!stillRaf) stillRaf = requestAnimationFrame(still);
+    }
+
+    const tick = () => {
+      const now = performance.now();
+      // A long gap (a paused loop) counts as one frame.
+      const dt = lastNow < 0 ? 0 : Math.min(50, Math.max(0, now - lastNow));
+      lastNow = now;
+      if (dirty) {
+        dirty = false;
+        measure();
+      }
+      if (now >= st.cfg.intro.rippleEndMs) step(now, dt);
+      if (layersDirty) buildLayers();
+      draw(now);
+      raf = requestAnimationFrame(tick);
+    };
+
+    // The loop runs only while the hero is on screen and the tab is visible.
+    let onScreen = true;
+    const sync = () => {
+      const visible = !reduced && onScreen && document.visibilityState === "visible";
+      if (visible && !raf) {
+        lastNow = -1;
+        raf = requestAnimationFrame(tick);
+      } else if (!visible && raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      sync();
+    });
+    io.observe(section);
+    document.addEventListener("visibilitychange", sync);
+
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      reduced = e.matches;
+      if (reduced) {
+        // The still frame is the design itself: no change survives.
+        live = [];
+        layersDirty = true;
+        sync();
+        scheduleStill();
+      } else {
+        cancelAnimationFrame(stillRaf);
+        stillRaf = 0;
+        sync();
+      }
+    };
+    reduce.addEventListener("change", onMotionChange);
+
+    const ro = new ResizeObserver(markDirty);
+    for (const el of [section, frameEl, navEl, textEl]) if (el) ro.observe(el);
+    document.fonts.ready.then(markDirty, () => {});
+    if (reduced) scheduleStill();
+    sync();
+
+    return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+      reduce.removeEventListener("change", onMotionChange);
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+      cancelAnimationFrame(stillRaf);
+      raf = 0;
+      stillRaf = 0;
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className={styles["hero-field"]} aria-hidden="true" />;
+}
