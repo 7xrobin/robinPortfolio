@@ -9,8 +9,8 @@
   --intro-trace-ease: linear;
   --intro-fill-delay: 1200ms;
   --intro-fill-duration: 450ms;
-  --intro-portrait-delay: 1450ms;
-  --intro-portrait-duration: 700ms;
+  --intro-portrait-fade-delay: 1550ms;
+  --intro-portrait-fade-duration: 600ms;
   --intro-text-delay: 2000ms;
   --intro-text-step: 150ms;
   --intro-text-duration: 500ms;
@@ -144,7 +144,7 @@
   left: 17%;
   top: 0%;
   max-width: none;
-  animation: hero-portrait-in var(--intro-portrait-duration) var(--intro-ease) var(--intro-portrait-delay) both;
+  animation: hero-fade var(--intro-portrait-fade-duration) var(--intro-ease) var(--intro-portrait-fade-delay) both;
 }
 
 .hero-text {
@@ -240,16 +240,6 @@
 @keyframes hero-fade {
   from {
     opacity: 0;
-  }
-}
-
-@keyframes hero-portrait-in {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-
-  to {
-    clip-path: inset(0);
   }
 }
 
