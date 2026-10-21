@@ -1,0 +1,40 @@
+/* The Work section. Its background speaks the hero's language: the accent
+   glow near the top-left continues the hero's bottom-left glow, so there is
+   no seam where the two sections meet. */
+.work {
+  --work-pad: clamp(20px, 5vw, 72px);
+  position: relative;
+  overflow: hidden;
+  min-height: 80vh;
+  background:
+    radial-gradient(700px 500px at 10% -10%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
+    radial-gradient(800px 520px at 95% 110%, color-mix(in srgb, #33969b 18%, transparent), transparent 62%),
+    var(--color-bg);
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 96px var(--work-pad);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  row-gap: 8px;
+}
+
+.work-title {
+  margin: 0;
+  font-size: clamp(32px, 3.4vw, 44px);
+}
+
+.inner > ul {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .inner {
+    padding-block: 64px;
+  }
+}

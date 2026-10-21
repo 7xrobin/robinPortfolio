@@ -9,6 +9,7 @@ export default function Hero() {
         <nav className={styles["hero-nav"]} data-field="nav" aria-label="Main">
           <a href="#top" className={styles["hero-logo"]} aria-label="Robin — home"></a>
           <div className={styles["hero-links"]}>
+            <a href="#work">Work</a>
             <a href="#about">About</a>
           </div>
         </nav>
