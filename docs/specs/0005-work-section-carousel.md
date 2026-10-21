@@ -11,10 +11,10 @@ tags: [spec, status/planned]
 
 # 0005 — Work section with glass project cards, and the hero field handing off to it on scroll
 
-**Status:** planned — spec only. Today the page is the hero alone (`app/page.tsx` renders
+**Status:** planned — plan written, no code yet. Today the page is the hero alone (`app/page.tsx` renders
 `<Hero />`); there is no section below it, and the nav's only link (`#about`,
 `components/Hero.tsx:11`) points at nothing.
-**Build doc:** `docs/plans/0005-work-section-carousel.md` (not written yet — `/planc`).
+**Build doc:** `docs/plans/0005-work-section-carousel.md` — run with `/exec`.
 
 ## Why
 
