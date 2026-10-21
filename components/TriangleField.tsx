@@ -119,7 +119,13 @@ interface FieldState {
  * the design's horizontal fade and the nav band, so nothing reaches into the
  * nav bar.
  */
-function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
+function place(
+  st: FieldState,
+  frame: Rect,
+  navBottom: number | null,
+  text: Rect | null,
+  changes: boolean,
+) {
   // The static field put design point (320, 138.6), node (0, 0) of the design
   // data, on the frame's left corner x and apex y — not on the apex, which is
   // design (560, 138.6), six cells right. Anchoring the lattice half a frame
@@ -184,8 +190,8 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
   });
   st.distMax = Math.max(1, ...st.edges.map((e) => e.dist), ...st.stubs.map((e) => e.dist));
   // The placement limits use the real frame (the portrait triangle), not
-  // the shifted lattice anchor.
-  st.elig = eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
+  // the shifted lattice anchor. A field without live changes has none.
+  st.elig = !changes ? null : eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
 }
 
 /**
@@ -394,7 +400,8 @@ function renderTrace(
  * and its changes resume once it is fully back.
  *
  * The work section mounts it with `handoff="enter"`: a smaller copy behind
- * the cards, with no live changes.
+ * the cards, traced in from the top down as the section scrolls in, with no
+ * live changes.
  */
 export default function TriangleField({ handoff }: { handoff: "leave" | "enter" }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -450,12 +457,22 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     let layersDirty = true;
     /** How far the hero has scrolled away, 0..1: its field's presence is 1 − leave. */
     let leave = 0;
+    /** How far the work section has scrolled in, 0..1: its field's presence. */
+    let enter = 0;
 
     /** The hero's leave progress, from where the section sits in the viewport. */
     const leaveProgress = () => {
       const rect = section.getBoundingClientRect();
       const end = rect.height - st.cfg.handoff.leaveEndAt * window.innerHeight;
       return clamp01(-rect.top / Math.max(1, end));
+    };
+
+    /** The work section's enter progress, from where it sits in the viewport. */
+    const enterProgress = () => {
+      const { enterStartAt, enterEndAt } = st.cfg.handoff;
+      const vh = window.innerHeight;
+      const rect = section.getBoundingClientRect();
+      return clamp01((enterStartAt * vh - rect.top) / Math.max(1, (enterStartAt - enterEndAt) * vh));
     };
 
     const buildLayers = () => {
@@ -490,7 +507,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
       canvas.height = Math.max(1, Math.round(st.height * st.dpr));
 
       if (frame.width > 0) {
-        place(st, frame, nav ? nav.top + nav.height : null, text);
+        place(st, frame, nav ? nav.top + nav.height : null, text, handoff === "leave");
       } else {
         st.g = null;
         st.elig = null;
@@ -563,11 +580,21 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     // absolute, so a late hydration joins the trace where it already is
     // instead of restarting it. Scrolling away plays the trace backwards to
     // the hero's presence: during the intro on the intro's own order, after
-    // it top-down, so the top rows go first.
+    // it top-down, so the top rows go first. The work field has no intro:
+    // scrolling in traces it top-down to its presence.
     const draw = (now: number) => {
       ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
       ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, st.width, st.height);
+      if (handoff === "enter") {
+        if (reduced || enter >= 1) {
+          ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
+          ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
+        } else {
+          renderTrace(ctx, st, glow, glowSize, presenceTime(st.cfg, enter), "fromTop");
+        }
+        return;
+      }
       const shown = presenceTime(st.cfg, 1 - leave);
       if (!reduced && now < introEndMs(st.cfg)) {
         renderTrace(ctx, st, glow, glowSize, Math.min(now, shown), "centroid");
@@ -615,7 +642,28 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     const markDirty = () => {
       dirty = true;
       if (reduced) scheduleStill();
+      else if (handoff === "enter") schedule();
     };
+
+    // The work field has no loop: it moves only with the scroll, so a scroll
+    // or a resize asks for one frame, and the frame draws only when the
+    // presence or the layout changed. Once whole, it stays on the layers.
+    let drawnEnter = -1;
+    const scrollFrame = () => {
+      raf = 0;
+      const measured = dirty;
+      if (dirty) {
+        dirty = false;
+        measure();
+      }
+      enter = enterProgress();
+      if (!measured && enter === drawnEnter) return;
+      drawnEnter = enter;
+      draw(Infinity);
+    };
+    function schedule() {
+      if (!raf && !reduced && onScreen) raf = requestAnimationFrame(scrollFrame);
+    }
 
     // Reduced motion: one static frame, the design at rest, and no loop. It is
     // redrawn only when the geometry changes.
@@ -658,8 +706,13 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     };
 
     // The loop runs only while the hero is on screen and the tab is visible.
+    // The work field's IntersectionObserver only gates its scroll frames.
     let onScreen = true;
     const sync = () => {
+      if (handoff === "enter") {
+        schedule();
+        return;
+      }
       const visible = !reduced && onScreen && document.visibilityState === "visible";
       if (visible && !raf) {
         lastNow = -1;
@@ -676,6 +729,8 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     });
     io.observe(section);
     document.addEventListener("visibilitychange", sync);
+    const onScroll = () => schedule();
+    if (handoff === "enter") window.addEventListener("scroll", onScroll, { passive: true });
 
     const onMotionChange = (e: MediaQueryListEvent) => {
       reduced = e.matches;
@@ -688,6 +743,8 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
       } else {
         cancelAnimationFrame(stillRaf);
         stillRaf = 0;
+        // The still frame drew the layers: the work field redraws its trace.
+        drawnEnter = -1;
         sync();
       }
     };
@@ -702,6 +759,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     return () => {
       io.disconnect();
       document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("scroll", onScroll);
       reduce.removeEventListener("change", onMotionChange);
       ro.disconnect();
       cancelAnimationFrame(raf);

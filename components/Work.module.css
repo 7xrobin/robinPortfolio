@@ -12,6 +12,36 @@
     var(--color-bg);
 }
 
+/* The work field's anchor: an invisible frame the field is placed from, as
+   the hero's is from the portrait. The design box spans 8/3 frame widths
+   and sits 2/3 of one left of the frame, so this left starts it at the
+   section's left edge; the top drops it just under the heading. */
+.anchor {
+  --work-frame: 288px;
+  --work-field-top: 150px;
+  position: absolute;
+  top: calc(var(--work-field-top) + var(--work-frame) * 138.6 / 480);
+  left: calc(var(--work-frame) * 2 / 3);
+  width: var(--work-frame);
+  aspect-ratio: 480 / 415.7;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 1080px) {
+  .anchor {
+    --work-frame: 240px;
+  }
+}
+
+@media (max-width: 560px) {
+  .anchor {
+    /* 56 % of the section's width, in vw so `top` can use it too. */
+    --work-frame: 56vw;
+    --work-field-top: 110px;
+  }
+}
+
 .inner {
   position: relative;
   z-index: 1;
