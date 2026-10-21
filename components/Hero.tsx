@@ -72,6 +72,11 @@ export default function Hero() {
               <circle r="8.4" fill="url(#frame-tip-glow)"></circle>
               <circle r="2.4" fill="#65d2d2"></circle>
             </g>
+            {/* The same point riding the outline back as it un-traces on scroll. */}
+            <g className={styles["hero-frame-untip"]}>
+              <circle r="8.4" fill="url(#frame-tip-glow)"></circle>
+              <circle r="2.4" fill="#65d2d2"></circle>
+            </g>
           </svg>
           <div className={`${styles["hero-portrait"]} lighten`}>
             {/* Plain img: static export cannot optimise images, and the portrait CSS targets a plain img. */}

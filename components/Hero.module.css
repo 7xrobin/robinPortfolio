@@ -17,6 +17,15 @@
   --intro-text-step: 200ms;
   --intro-text-duration: 800ms;
   --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Scrolling away plays the frame's intro backwards with the field:
+     TriangleField sets --hero-leave (0..1) on the section. The portrait
+     fades out, then the fill and glow, then the outline un-traces back to
+     the apex. Each is 0..1 over its own span of --hero-leave. The base
+     rules read these, so the intro keyframes, which only set `from`, end on
+     them too. */
+  --leave-portrait: clamp(0, calc(var(--hero-leave, 0) / 0.35), 1);
+  --leave-fill: clamp(0, calc((var(--hero-leave, 0) - 0.25) / 0.25), 1);
+  --leave-trace: clamp(0, calc((var(--hero-leave, 0) - 0.4) / 0.55), 1);
   background:
     radial-gradient(900px 560px at 85% -120px, color-mix(in srgb, oklch(0.42 0.08 225) 45%, transparent), transparent 62%),
     radial-gradient(700px 500px at 10% 110%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
@@ -94,23 +103,28 @@
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 0 18px color-mix(in srgb, oklch(0.74 0.10 210) 50%, transparent));
+  filter: drop-shadow(0 0 18px color-mix(in srgb, oklch(0.74 0.10 210) calc(50% * (1 - var(--leave-fill))), transparent));
   animation: hero-frame-glow var(--intro-fill-duration) var(--intro-ease) var(--intro-fill-delay) both;
 }
 
 .hero-frame-fill {
+  opacity: calc(1 - var(--leave-fill));
   animation: hero-fade var(--intro-fill-duration) var(--intro-ease) var(--intro-fill-delay) both;
 }
 
 /* The lit point on the trace's tip, on the trace's own timeline. Hidden at
    rest. The offset path is the outline, in viewBox units. */
-.hero-frame-tip {
+.hero-frame-tip,
+.hero-frame-untip {
   opacity: 0;
   transform-box: view-box;
   transform-origin: 0 0;
   offset-path: path("M240,0 L480,415.7 L0,415.7 Z");
   offset-rotate: 0deg;
   offset-distance: 100%;
+}
+
+.hero-frame-tip {
   animation:
     hero-frame-tip-move var(--intro-trace-duration) var(--intro-trace-ease) var(--intro-trace-delay) both,
     hero-frame-tip-glint var(--intro-trace-duration) linear var(--intro-trace-delay) both;
@@ -123,6 +137,20 @@
   animation: hero-frame-trace var(--intro-trace-duration) var(--intro-trace-ease) var(--intro-trace-delay) backwards;
 }
 
+/* Un-tracing: the dash only while leaving, so the outline at rest keeps
+   its joins. A growing offset hides the outline from its end back to the
+   apex, the trace played backwards. */
+.hero[data-leaving] .hero-frame-trace {
+  stroke-dasharray: 1440 1440;
+  stroke-dashoffset: calc(1440px * var(--leave-trace));
+}
+
+/* The un-trace's tip: shown only while the outline is partly drawn. */
+.hero-frame-untip {
+  opacity: clamp(0, min(calc(var(--leave-trace) * 30), calc((1 - var(--leave-trace)) * 30)), 1);
+  offset-distance: calc((1 - var(--leave-trace)) * 100%);
+}
+
 .hero-portrait {
   position: absolute;
   inset: 0;
@@ -132,6 +160,7 @@
 
 /* The reveal goes on the img: .hero-portrait's clip-path is the triangle. */
 .hero-portrait img {
+  opacity: calc(1 - var(--leave-portrait));
   position: absolute;
   width: 70%;
   left: 17%;

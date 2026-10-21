@@ -425,6 +425,10 @@ function renderTrace(
  * (lib/field/changes.ts). Scrolling away, it dissolves from the top down,
  * and its changes resume once it is fully back.
  *
+ * It also sets `--hero-leave` (0..1) on the section, and `data-leaving`
+ * while it is above 0, so the hero's CSS can play the portrait frame's
+ * intro backwards with the field.
+ *
  * The work section mounts it with `handoff="enter"` and `anchor` set to the
  * hero's frame: triangles grown on the hero's lattice over the whole
  * section (lib/field/grow.ts), so the hero's field reads as continuing down
@@ -502,6 +506,14 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
       return clamp01((enterStartAt * window.innerHeight - rect.top) / Math.max(1, enterWholeAt * rect.height));
     };
 
+    /** Hands the hero's leave progress to its CSS, when it changed. */
+    let sharedLeave = 0;
+    const shareLeave = () => {
+      if (leave === sharedLeave) return;
+      sharedLeave = leave;
+      section.style.setProperty("--hero-leave", leave.toFixed(4));
+      section.toggleAttribute("data-leaving", leave > 0);
+    };
 
     const buildLayers = () => {
       layersDirty = false;
@@ -717,7 +729,10 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
         dirty = false;
         measure();
       }
-      if (handoff === "leave") leave = leaveProgress();
+      if (handoff === "leave") {
+        leave = leaveProgress();
+        shareLeave();
+      }
       if (leave > 0) {
         // Scrolled away: the trace plays the design, so the live changes
         // are dropped, and none start until the hero is fully back.
@@ -763,7 +778,10 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     const onMotionChange = (e: MediaQueryListEvent) => {
       reduced = e.matches;
       if (reduced) {
-        // The still frame is the design itself: no change survives.
+        // The still frame is the design itself: no change survives, and the
+        // portrait frame is shown whole.
+        leave = 0;
+        shareLeave();
         live = [];
         layersDirty = true;
         sync();
@@ -794,6 +812,8 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
       cancelAnimationFrame(stillRaf);
       raf = 0;
       stillRaf = 0;
+      section.style.removeProperty("--hero-leave");
+      section.removeAttribute("data-leaving");
     };
   }, [handoff, anchor]);
 
