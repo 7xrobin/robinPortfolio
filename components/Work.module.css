@@ -38,3 +38,115 @@
     padding-block: 64px;
   }
 }
+
+/* The row of cards. It bleeds to the section's side padding so a card can
+   peek in from the edge; scroll-padding keeps snapped cards aligned with
+   the heading. Vertical padding leaves room for the cards' shadows. */
+.track {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--work-pad);
+  scroll-behavior: smooth;
+  margin: 0 calc(-1 * var(--work-pad));
+  padding: 24px var(--work-pad) 40px;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text) 24%, transparent) transparent;
+}
+
+/* Glass: a translucent surface that blurs whatever sits behind it. */
+.card {
+  flex: 0 0 clamp(280px, 32vw, 380px);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+  background: color-mix(in srgb, var(--color-surface) 38%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent),
+    0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.card-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.card-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.card-desc {
+  margin: 0;
+  color: color-mix(in srgb, var(--color-text) 72%, transparent);
+  flex: 1;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Prev / next: round glass buttons beside the heading. */
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.controls[hidden] {
+  display: none;
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 38%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.arrow:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 560px) {
+  .card {
+    flex-basis: 82%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    scroll-behavior: auto;
+  }
+}
