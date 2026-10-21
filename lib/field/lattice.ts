@@ -197,7 +197,7 @@ export function nodeAt(l: Lattice, r: number, c: number): LatticeNode | undefine
   return l.nodes[(r - l.rMin) * (l.cMax - l.cMin + 1) + (c - l.cMin)];
 }
 
-/** The ripple origin: the frame triangle's centroid. */
+/** The intro trace's origin: the frame triangle's centroid. */
 export function frameCentroid(frame: Rect): Point {
   return { x: frame.left + frame.width / 2, y: frame.top + (2 / 3) * frame.height };
 }

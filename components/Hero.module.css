@@ -3,17 +3,19 @@
   overflow: hidden;
   /* Intro timings. They are CSS so the intro runs without JS. Base rules
      hold the final state; the hidden state lives only in each keyframe's
-     `from`, with fill-mode both. */
-  --intro-trace-delay: 300ms;
-  --intro-trace-duration: 900ms;
-  --intro-trace-ease: linear;
-  --intro-fill-delay: 1200ms;
-  --intro-fill-duration: 450ms;
-  --intro-portrait-fade-delay: 1550ms;
-  --intro-portrait-fade-duration: 600ms;
-  --intro-text-delay: 2000ms;
-  --intro-text-step: 150ms;
-  --intro-text-duration: 500ms;
+     `from`, with fill-mode both.
+     The frame trace starts once the field has traced its last edge
+     (FIELD.intro in lib/field/config.ts: 300 + 3600 + 900 = 4800 ms). */
+  --intro-trace-delay: 4850ms;
+  --intro-trace-duration: 1600ms;
+  --intro-trace-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --intro-fill-delay: 6350ms;
+  --intro-fill-duration: 800ms;
+  --intro-portrait-fade-delay: 6800ms;
+  --intro-portrait-fade-duration: 1000ms;
+  --intro-text-delay: 7400ms;
+  --intro-text-step: 200ms;
+  --intro-text-duration: 800ms;
   --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
   background:
     radial-gradient(900px 560px at 85% -120px, color-mix(in srgb, oklch(0.42 0.08 225) 45%, transparent), transparent 62%),

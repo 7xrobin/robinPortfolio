@@ -356,7 +356,8 @@ export function excluded(live: readonly Change[]): Excluded {
   return out;
 }
 
-const smooth = (u: number) => {
+/** Smoothstep on u clamped to 0..1: the ease every field motion uses. */
+export const smooth = (u: number) => {
   const v = u < 0 ? 0 : u > 1 ? 1 : u;
   return v * v * (3 - 2 * v);
 };
@@ -406,8 +407,7 @@ export function sample(ch: Change, t: number, palette: readonly string[]): Chang
   const u = progress(ch, t);
   const trace = (list: readonly ChangeEdge[], out: boolean) =>
     list.map((e, i) => {
-      const v = u * list.length - i;
-      const local = v < 0 ? 0 : v > 1 ? 1 : v;
+      const local = smooth(u * list.length - i);
       return { a: e.a, b: e.b, drawn: out ? 1 - local : local };
     });
   const edges = [...trace(ch.edgesOut, true), ...trace(ch.edgesIn, false)];

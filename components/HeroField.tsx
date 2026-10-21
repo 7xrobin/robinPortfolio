@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import styles from "./Hero.module.css";
-import { DESIGN, MOBILE_QUERY, fieldConfig, type FieldConfig } from "@/lib/field/config";
+import { DESIGN, MOBILE_QUERY, fieldConfig, introEndMs, type FieldConfig } from "@/lib/field/config";
 import { DESIGN_EDGES, DESIGN_FILLS, DESIGN_LIT, DESIGN_STUBS } from "@/lib/field/design";
 import {
   eligible,
   excluded,
   pickChange,
   sample,
+  smooth,
   type Change,
   type Eligible,
   type Excluded,
@@ -44,11 +45,12 @@ interface PlacedNode extends Point {
 
 interface PlacedEdge {
   key: EdgeKey;
+  /** The end nearer the frame centroid: the intro traces a → b. */
   a: Point;
   b: Point;
   /** fade (mean of the two ends) × nav band (min of the two ends). */
   weight: number;
-  /** Distance of the midpoint to the ripple centre. */
+  /** Distance of `a` to the frame centroid. */
   dist: number;
 }
 
@@ -59,7 +61,7 @@ interface PlacedFill {
   opacity: number;
   /** fade (mean of the three corners) × nav band (min of the three). */
   weight: number;
-  /** Distance of the centroid to the ripple centre. */
+  /** Distance of the triangle's centroid to the frame centroid. */
   dist: number;
 }
 
@@ -82,19 +84,17 @@ interface FieldState {
   box: Rect;
   fills: PlacedFill[];
   lit: PlacedLit[];
-  /** Ripple radius at which the farthest section corner is fully revealed. */
-  rippleMax: number;
+  /** The farthest edge's `dist`: the intro trace has swept the design by then. */
+  distMax: number;
   /** Places a node; set by place(). */
   at: (k: NodeKey) => PlacedNode;
   /** Where changes may go in this layout. */
   elig: Eligible | null;
 }
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-
 /**
- * Places every design element in the section: positions, weights and ripple
- * distances. The weights fold in the design's horizontal fade and the nav
+ * Places every design element in the section: positions, weights and
+ * distances to the frame centroid, which time the intro trace. The weights fold in the design's horizontal fade and the nav
  * band, so nothing reaches into the nav bar.
  */
 function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
@@ -112,14 +112,20 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
   st.at = at;
   const dist = (x: number, y: number) => Math.hypot(x - centre.x, y - centre.y);
   const edge = ([ka, kb]: readonly [NodeKey, NodeKey]): PlacedEdge => {
-    const a = at(ka);
-    const b = at(kb);
+    let a = at(ka);
+    let b = at(kb);
+    let da = dist(a.x, a.y);
+    const db = dist(b.x, b.y);
+    if (db < da) {
+      [a, b] = [b, a];
+      da = db;
+    }
     return {
       key: edgeKey(ka, kb),
       a,
       b,
       weight: ((a.fade + b.fade) / 2) * Math.min(a.band, b.band),
-      dist: dist((a.x + b.x) / 2, (a.y + b.y) / 2),
+      dist: da,
     };
   };
   st.edges = DESIGN_EDGES.map(edge);
@@ -142,14 +148,7 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
     const n = at(k);
     return { key: nodeKey(k), x: n.x, y: n.y, weight: n.fade * n.band, dist: dist(n.x, n.y) };
   });
-  const soft = st.cfg.intro.rippleSoftCells * g.side;
-  st.rippleMax =
-    Math.max(
-      Math.hypot(centre.x, centre.y),
-      Math.hypot(st.width - centre.x, centre.y),
-      Math.hypot(centre.x, st.height - centre.y),
-      Math.hypot(st.width - centre.x, st.height - centre.y),
-    ) + soft;
+  st.distMax = Math.max(1, ...st.edges.map((e) => e.dist), ...st.stubs.map((e) => e.dist));
   // The placement limits use the real frame (the portrait triangle), not
   // the shifted lattice anchor.
   st.elig = eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
@@ -280,10 +279,68 @@ function renderLines(
 }
 
 /**
+ * Draws the intro at `now`: every edge traced from its near end outward, a
+ * lit point on its tip while it grows, starting later the farther it is from
+ * the frame centroid; fills and lit nodes fade in once the trace has passed
+ * them. It is the same trace a rebuild draws after the intro, over the whole
+ * design.
+ */
+function renderTrace(
+  ctx: CanvasRenderingContext2D,
+  st: FieldState,
+  glow: HTMLCanvasElement,
+  glowSize: number,
+  now: number,
+) {
+  if (!st.g) return;
+  const { lines, intro } = st.cfg;
+  const start = (d: number) => intro.traceStartMs + intro.spreadMs * smooth(d / st.distMax);
+  const settle = (d: number) => smooth((now - start(d) - intro.edgeMs) / intro.settleMs);
+  renderFills(ctx, st, settle, NO_SKIP);
+
+  ctx.save();
+  clipToBox(ctx, st);
+  ctx.strokeStyle = lineGradient(ctx, st);
+  ctx.lineWidth = lines.width * st.g.s;
+  const tipSize = glowSize * 1.5;
+  // Tips go on after every line, so no line is drawn over a lit point.
+  const tips: (Point & { w: number })[] = [];
+  const trace = (e: PlacedEdge) => {
+    const drawn = smooth((now - start(e.dist)) / intro.edgeMs);
+    if (drawn <= 0 || e.weight <= 0.001) return;
+    const tip = { x: e.a.x + (e.b.x - e.a.x) * drawn, y: e.a.y + (e.b.y - e.a.y) * drawn };
+    // Brighter while it grows, settling to the line opacity, as a rebuild does.
+    const lift = Math.sin(Math.PI * drawn);
+    ctx.globalAlpha = e.weight * (lines.opacity + (1 - lines.opacity) * lift);
+    ctx.beginPath();
+    ctx.moveTo(e.a.x, e.a.y);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.stroke();
+    if (drawn < 0.999) tips.push({ ...tip, w: e.weight });
+  };
+  for (const e of st.edges) trace(e);
+  for (const e of st.stubs) trace(e);
+
+  for (const t of tips) {
+    ctx.globalAlpha = t.w;
+    ctx.drawImage(glow, t.x - tipSize / 2, t.y - tipSize / 2, tipSize, tipSize);
+  }
+  const half = glowSize / 2;
+  for (const n of st.lit) {
+    const a = n.weight * settle(n.dist);
+    if (a <= 0.001) continue;
+    ctx.globalAlpha = a;
+    ctx.drawImage(glow, n.x - half, n.y - half, glowSize, glowSize);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/**
  * The hero's triangle field: the design's own triangles, fills and lit nodes
  * on a canvas, anchored on the frame, faded to the right like the design and
- * kept below the nav bar. The intro ripple reveals it from the frame
- * centroid; after it, triangles dissolve and form along the edge of the
+ * kept below the nav bar. The intro traces it edge by edge outward from the
+ * frame centroid; after it, triangles dissolve and form along the edge of the
  * shape, chains of new triangles grow out of it, triangles in the body are
  * erased and traced again edge by edge, fills change colour and points light and fade, each going back to
  * the design (lib/field/changes.ts).
@@ -327,7 +384,7 @@ export default function HeroField() {
       box: { left: 0, top: 0, width: 0, height: 0 },
       fills: [],
       lit: [],
-      rippleMax: 0,
+      distMax: 1,
       at: () => ({ x: 0, y: 0, fade: 0, band: 0 }),
       elig: null,
     };
@@ -387,13 +444,6 @@ export default function HeroField() {
       buildLayers();
     };
 
-    const rippleSoft = () => Math.max(1e-3, st.cfg.intro.rippleSoftCells * (st.g?.side ?? 0));
-    /** Ripple radius at `now`: 0 before the window, rippleMax after it. */
-    const rippleAt = (now: number) => {
-      const { rippleStartMs, rippleEndMs } = st.cfg.intro;
-      return st.rippleMax * clamp01((now - rippleStartMs) / (rippleEndMs - rippleStartMs));
-    };
-
     /** Draws the live changes' fills (between the layers) or lines and points (on top). */
     const drawChanges = (part: "fills" | "lines") => {
       if (!st.g || !live.length) return;
@@ -447,31 +497,23 @@ export default function HeroField() {
       ctx.globalAlpha = 1;
     };
 
-    // While the ripple grows the design is drawn element by element, each
-    // faded in by the ripple's soft edge as it passes the element's midpoint or
-    // centroid; once it has passed every corner, the cached layers take over,
-    // with the live changes drawn on them. The time is absolute, so a late
-    // hydration joins the ripple where it already is instead of restarting it.
+    // During the intro the design is drawn element by element as the trace
+    // reaches it; once every edge is traced and every fill settled, the cached
+    // layers take over, with the live changes drawn on them. The time is
+    // absolute, so a late hydration joins the trace where it already is
+    // instead of restarting it.
     const draw = (now: number) => {
       ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
       ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, st.width, st.height);
-      if (reduced || now >= st.cfg.intro.rippleEndMs) {
+      if (reduced || now >= introEndMs(st.cfg)) {
         ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
         drawChanges("fills");
         ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
         drawChanges("lines");
         return;
       }
-      const r = rippleAt(now);
-      if (r <= 0) return;
-      const soft = rippleSoft();
-      const reveal = (d: number) => {
-        const e = clamp01((r - d) / soft);
-        return e * e * (3 - 2 * e);
-      };
-      renderFills(ctx, st, reveal, NO_SKIP);
-      renderLines(ctx, st, glow, glowSize, reveal, NO_SKIP);
+      renderTrace(ctx, st, glow, glowSize, now);
     };
 
     /**
@@ -532,7 +574,7 @@ export default function HeroField() {
         dirty = false;
         measure();
       }
-      if (now >= st.cfg.intro.rippleEndMs) step(now, dt);
+      if (now >= introEndMs(st.cfg)) step(now, dt);
       if (layersDirty) buildLayers();
       draw(now);
       raf = requestAnimationFrame(tick);

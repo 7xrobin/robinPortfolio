@@ -57,7 +57,7 @@ export interface FieldConfig {
   };
   /** Edge, colour and point changes after the intro (lib/field/changes.ts). */
   changes: {
-    /** From the end of the ripple until pacing.calmAtMs. */
+    /** From the end of the intro until pacing.calmAtMs. */
     busy: ChangePacing;
     /** From pacing.calmAtMs on. */
     calm: ChangePacing;
@@ -81,13 +81,18 @@ export interface FieldConfig {
     minChangeFade: number;
   };
   intro: {
-    /** The ripple grows from the frame centroid between these two times,
-     *  on the performance.now() clock (navigation start = 0). */
-    rippleStartMs: number;
-    /** By then the ripple has passed the farthest section corner. */
-    rippleEndMs: number;
-    /** Width of the ripple's soft edge, in cells. */
-    rippleSoftCells: number;
+    /** The design is traced edge by edge, outward from the frame centroid,
+     *  starting at this time on the performance.now() clock (navigation start = 0). */
+    traceStartMs: number;
+    /** An edge starts tracing at traceStartMs + spreadMs × smooth(its near
+     *  end's distance to the centroid ÷ the farthest edge's), so the trace
+     *  sweeps outward over this long, easing in and out. */
+    spreadMs: number;
+    /** Each edge grows from its near end to its far end over this long, eased,
+     *  a lit point on its tip, the same trace as a rebuild after the intro. */
+    edgeMs: number;
+    /** A fill or a lit node fades in over this long once the trace has passed it. */
+    settleMs: number;
   };
   maxDpr: number;
 }
@@ -116,7 +121,7 @@ export const FIELD: FieldConfig = {
     dropCells: 1,
   },
   pacing: {
-    calmAtMs: 3500,
+    calmAtMs: 9200,
   },
   changes: {
     busy: { perSecond: 7, holdMinMs: 900, holdMaxMs: 2000, fadeMs: 900 },
@@ -128,9 +133,10 @@ export const FIELD: FieldConfig = {
     minChangeFade: 0.15,
   },
   intro: {
-    rippleStartMs: 250,
-    rippleEndMs: 1350,
-    rippleSoftCells: 2,
+    traceStartMs: 300,
+    spreadMs: 3600,
+    edgeMs: 900,
+    settleMs: 800,
   },
   maxDpr: 2,
 };
@@ -168,4 +174,10 @@ function merge<T>(base: T, over: DeepPartial<T> | undefined): T {
 /** The config in effect for a viewport: the base, plus mobile overrides when they apply. */
 export function fieldConfig(mobile: boolean): FieldConfig {
   return mobile ? merge(FIELD, MOBILE_OVERRIDES) : FIELD;
+}
+
+/** When the intro has traced every edge and settled every fill and lit node. */
+export function introEndMs(cfg: FieldConfig): number {
+  const { traceStartMs, spreadMs, edgeMs, settleMs } = cfg.intro;
+  return traceStartMs + spreadMs + edgeMs + settleMs;
 }
