@@ -1,10 +1,10 @@
 import styles from "./Hero.module.css";
-import HeroField from "./HeroField";
+import TriangleField from "./TriangleField";
 
 export default function Hero() {
   return (
     <section id="top" className={styles.hero} data-screen-label="01 Hero">
-      <HeroField />
+      <TriangleField handoff="leave" />
       <div className={styles["hero-inner"]}>
         <nav className={styles["hero-nav"]} data-field="nav" aria-label="Main">
           <a href="#top" className={styles["hero-logo"]} aria-label="Robin — home"></a>

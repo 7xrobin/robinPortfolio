@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import styles from "./Hero.module.css";
+import styles from "./TriangleField.module.css";
 import { DESIGN, MOBILE_QUERY, fieldConfig, introEndMs, type FieldConfig } from "@/lib/field/config";
 import { DESIGN_EDGES, DESIGN_FILLS, DESIGN_LIT, DESIGN_STUBS } from "@/lib/field/design";
 import {
@@ -337,15 +337,21 @@ function renderTrace(
 }
 
 /**
- * The hero's triangle field: the design's own triangles, fills and lit nodes
- * on a canvas, anchored on the frame, faded to the right like the design and
- * kept below the nav bar. The intro traces it edge by edge outward from the
- * frame centroid; after it, triangles dissolve and form along the edge of the
- * shape, chains of new triangles grow out of it, triangles in the body are
- * erased and traced again edge by edge, fills change colour and points light and fade, each going back to
- * the design (lib/field/changes.ts).
+ * The triangle field: the design's own triangles, fills and lit nodes on a
+ * canvas filling its section, anchored on the section's `data-field="frame"`
+ * element, faded to the right like the design and kept below the nav bar.
+ *
+ * The hero mounts it with `handoff="leave"`: the intro traces it edge by edge
+ * outward from the frame centroid; after it, triangles dissolve and form
+ * along the edge of the shape, chains of new triangles grow out of it,
+ * triangles in the body are erased and traced again edge by edge, fills
+ * change colour and points light and fade, each going back to the design
+ * (lib/field/changes.ts).
+ *
+ * The work section mounts it with `handoff="enter"`: a smaller copy behind
+ * the cards, with no live changes.
  */
-export default function HeroField() {
+export default function TriangleField({ handoff }: { handoff: "leave" | "enter" }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -634,5 +640,5 @@ export default function HeroField() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={styles["hero-field"]} aria-hidden="true" />;
+  return <canvas ref={canvasRef} className={styles.field} aria-hidden="true" />;
 }
