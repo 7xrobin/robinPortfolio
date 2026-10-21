@@ -2,7 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import styles from "./TriangleField.module.css";
-import { DESIGN, MOBILE_QUERY, fieldConfig, introEndMs, type FieldConfig } from "@/lib/field/config";
+import {
+  DESIGN,
+  MOBILE_QUERY,
+  fieldConfig,
+  introEndMs,
+  presenceTime,
+  type FieldConfig,
+} from "@/lib/field/config";
 import { DESIGN_EDGES, DESIGN_FILLS, DESIGN_LIT, DESIGN_STUBS } from "@/lib/field/design";
 import {
   eligible,
@@ -37,6 +44,12 @@ function relativeRect(el: Element, base: DOMRect): Rect {
 
 type NodeKey = readonly [r: number, c: number];
 
+const clamp01 = (u: number) => Math.min(1, Math.max(0, u));
+
+/** The order the trace reaches the design's elements in: outward from the
+ *  frame centroid (the hero's intro), or top-down by `drop`. */
+type TraceOrder = "centroid" | "fromTop" | "fromBottom";
+
 /** A design node placed in the section. */
 interface PlacedNode extends Point {
   fade: number;
@@ -52,6 +65,10 @@ interface PlacedEdge {
   weight: number;
   /** Distance of `a` to the frame centroid. */
   dist: number;
+  /** The edge, upper end first: the scroll handoff traces it top-down. */
+  down: { a: Point; b: Point };
+  /** How far down the design box the upper end sits, 0..1. */
+  drop: number;
 }
 
 interface PlacedFill {
@@ -63,12 +80,15 @@ interface PlacedFill {
   weight: number;
   /** Distance of the triangle's centroid to the frame centroid. */
   dist: number;
+  /** How far down the design box the triangle's centroid sits, 0..1. */
+  drop: number;
 }
 
 interface PlacedLit extends Point {
   key: string;
   weight: number;
   dist: number;
+  drop: number;
 }
 
 interface FieldState {
@@ -93,9 +113,11 @@ interface FieldState {
 }
 
 /**
- * Places every design element in the section: positions, weights and
- * distances to the frame centroid, which time the intro trace. The weights fold in the design's horizontal fade and the nav
- * band, so nothing reaches into the nav bar.
+ * Places every design element in the section: positions, weights,
+ * distances to the frame centroid, which time the intro trace, and drops
+ * down the design box, which time the scroll handoff. The weights fold in
+ * the design's horizontal fade and the nav band, so nothing reaches into the
+ * nav bar.
  */
 function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
   // The static field put design point (320, 138.6), node (0, 0) of the design
@@ -111,6 +133,10 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
   };
   st.at = at;
   const dist = (x: number, y: number) => Math.hypot(x - centre.x, y - centre.y);
+  const b0 = designToSection(g, 0, 0);
+  const b1 = designToSection(g, DESIGN.width, DESIGN.height);
+  st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
+  const drop = (y: number) => clamp01((y - st.box.top) / st.box.height);
   const edge = ([ka, kb]: readonly [NodeKey, NodeKey]): PlacedEdge => {
     let a = at(ka);
     let b = at(kb);
@@ -120,19 +146,19 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
       [a, b] = [b, a];
       da = db;
     }
+    const down = a.y <= b.y ? { a, b } : { a: b, b: a };
     return {
       key: edgeKey(ka, kb),
       a,
       b,
       weight: ((a.fade + b.fade) / 2) * Math.min(a.band, b.band),
       dist: da,
+      down,
+      drop: drop(down.a.y),
     };
   };
   st.edges = DESIGN_EDGES.map(edge);
   st.stubs = DESIGN_STUBS.map(edge);
-  const b0 = designToSection(g, 0, 0);
-  const b1 = designToSection(g, DESIGN.width, DESIGN.height);
-  st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
   st.fills = DESIGN_FILLS.map((f) => {
     const [p, q, r] = cellNodes(f.cell).map(at);
     return {
@@ -142,11 +168,19 @@ function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect
       opacity: f.opacity,
       weight: ((p.fade + q.fade + r.fade) / 3) * Math.min(p.band, q.band, r.band),
       dist: dist((p.x + q.x + r.x) / 3, (p.y + q.y + r.y) / 3),
+      drop: drop((p.y + q.y + r.y) / 3),
     };
   });
   st.lit = DESIGN_LIT.map((k) => {
     const n = at(k);
-    return { key: nodeKey(k), x: n.x, y: n.y, weight: n.fade * n.band, dist: dist(n.x, n.y) };
+    return {
+      key: nodeKey(k),
+      x: n.x,
+      y: n.y,
+      weight: n.fade * n.band,
+      dist: dist(n.x, n.y),
+      drop: drop(n.y),
+    };
   });
   st.distMax = Math.max(1, ...st.edges.map((e) => e.dist), ...st.stubs.map((e) => e.dist));
   // The placement limits use the real frame (the portrait triangle), not
@@ -210,12 +244,12 @@ function fillTriangle(ctx: CanvasRenderingContext2D, [p, q, r]: readonly [Point,
 
 /**
  * Draws the design's fills onto `ctx` (already transformed to CSS px), each
- * at its weight times `reveal(dist)`, leaving out the cells in `skip`.
+ * at its weight times `reveal(fill)`, leaving out the cells in `skip`.
  */
 function renderFills(
   ctx: CanvasRenderingContext2D,
   st: FieldState,
-  reveal: (dist: number) => number,
+  reveal: (f: PlacedFill) => number,
   skip: Excluded,
 ) {
   if (!st.g) return;
@@ -224,7 +258,7 @@ function renderFills(
   clipToBox(ctx, st);
   for (const f of st.fills) {
     if (skip.fills.has(f.cell)) continue;
-    const a = f.opacity * f.weight * reveal(f.dist);
+    const a = f.opacity * f.weight * reveal(f);
     if (a <= 0.001) continue;
     ctx.globalAlpha = a;
     ctx.fillStyle = fills.palette[f.colour];
@@ -284,6 +318,11 @@ function renderLines(
  * the frame centroid; fills and lit nodes fade in once the trace has passed
  * them. It is the same trace a rebuild draws after the intro, over the whole
  * design.
+ *
+ * The scroll handoff draws the same trace in another `order`: `fromTop`
+ * starts each element later the lower it sits in the design box, and
+ * `fromBottom` the higher, so played backwards the top goes first. Both
+ * grow every edge from its upper end down.
  */
 function renderTrace(
   ctx: CanvasRenderingContext2D,
@@ -291,11 +330,15 @@ function renderTrace(
   glow: HTMLCanvasElement,
   glowSize: number,
   now: number,
+  order: TraceOrder,
 ) {
   if (!st.g) return;
   const { lines, intro } = st.cfg;
-  const start = (d: number) => intro.traceStartMs + intro.spreadMs * smooth(d / st.distMax);
-  const settle = (d: number) => smooth((now - start(d) - intro.edgeMs) / intro.settleMs);
+  const key = (el: { dist: number; drop: number }) =>
+    order === "centroid" ? el.dist / st.distMax : order === "fromTop" ? el.drop : 1 - el.drop;
+  const start = (k: number) => intro.traceStartMs + intro.spreadMs * smooth(k);
+  const settle = (el: { dist: number; drop: number }) =>
+    smooth((now - start(key(el)) - intro.edgeMs) / intro.settleMs);
   renderFills(ctx, st, settle, NO_SKIP);
 
   ctx.save();
@@ -306,14 +349,15 @@ function renderTrace(
   // Tips go on after every line, so no line is drawn over a lit point.
   const tips: (Point & { w: number })[] = [];
   const trace = (e: PlacedEdge) => {
-    const drawn = smooth((now - start(e.dist)) / intro.edgeMs);
+    const drawn = smooth((now - start(key(e))) / intro.edgeMs);
     if (drawn <= 0 || e.weight <= 0.001) return;
-    const tip = { x: e.a.x + (e.b.x - e.a.x) * drawn, y: e.a.y + (e.b.y - e.a.y) * drawn };
+    const { a, b } = order === "centroid" ? e : e.down;
+    const tip = { x: a.x + (b.x - a.x) * drawn, y: a.y + (b.y - a.y) * drawn };
     // Brighter while it grows, settling to the line opacity, as a rebuild does.
     const lift = Math.sin(Math.PI * drawn);
     ctx.globalAlpha = e.weight * (lines.opacity + (1 - lines.opacity) * lift);
     ctx.beginPath();
-    ctx.moveTo(e.a.x, e.a.y);
+    ctx.moveTo(a.x, a.y);
     ctx.lineTo(tip.x, tip.y);
     ctx.stroke();
     if (drawn < 0.999) tips.push({ ...tip, w: e.weight });
@@ -327,7 +371,7 @@ function renderTrace(
   }
   const half = glowSize / 2;
   for (const n of st.lit) {
-    const a = n.weight * settle(n.dist);
+    const a = n.weight * settle(n);
     if (a <= 0.001) continue;
     ctx.globalAlpha = a;
     ctx.drawImage(glow, n.x - half, n.y - half, glowSize, glowSize);
@@ -346,7 +390,8 @@ function renderTrace(
  * along the edge of the shape, chains of new triangles grow out of it,
  * triangles in the body are erased and traced again edge by edge, fills
  * change colour and points light and fade, each going back to the design
- * (lib/field/changes.ts).
+ * (lib/field/changes.ts). Scrolling away, it dissolves from the top down,
+ * and its changes resume once it is fully back.
  *
  * The work section mounts it with `handoff="enter"`: a smaller copy behind
  * the cards, with no live changes.
@@ -403,6 +448,15 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     let due = 0;
     /** The cached layers no longer match the live changes. */
     let layersDirty = true;
+    /** How far the hero has scrolled away, 0..1: its field's presence is 1 − leave. */
+    let leave = 0;
+
+    /** The hero's leave progress, from where the section sits in the viewport. */
+    const leaveProgress = () => {
+      const rect = section.getBoundingClientRect();
+      const end = rect.height - st.cfg.handoff.leaveEndAt * window.innerHeight;
+      return clamp01(-rect.top / Math.max(1, end));
+    };
 
     const buildLayers = () => {
       layersDirty = false;
@@ -507,19 +561,26 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     // reaches it; once every edge is traced and every fill settled, the cached
     // layers take over, with the live changes drawn on them. The time is
     // absolute, so a late hydration joins the trace where it already is
-    // instead of restarting it.
+    // instead of restarting it. Scrolling away plays the trace backwards to
+    // the hero's presence: during the intro on the intro's own order, after
+    // it top-down, so the top rows go first.
     const draw = (now: number) => {
       ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
       ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, st.width, st.height);
-      if (reduced || now >= introEndMs(st.cfg)) {
-        ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
-        drawChanges("fills");
-        ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
-        drawChanges("lines");
+      const shown = presenceTime(st.cfg, 1 - leave);
+      if (!reduced && now < introEndMs(st.cfg)) {
+        renderTrace(ctx, st, glow, glowSize, Math.min(now, shown), "centroid");
         return;
       }
-      renderTrace(ctx, st, glow, glowSize, now);
+      if (!reduced && leave > 0) {
+        renderTrace(ctx, st, glow, glowSize, shown, "fromBottom");
+        return;
+      }
+      ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
+      drawChanges("fills");
+      ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
+      drawChanges("lines");
     };
 
     /**
@@ -580,7 +641,17 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
         dirty = false;
         measure();
       }
-      if (now >= introEndMs(st.cfg)) step(now, dt);
+      if (handoff === "leave") leave = leaveProgress();
+      if (leave > 0) {
+        // Scrolled away: the trace plays the design, so the live changes
+        // are dropped, and none start until the hero is fully back.
+        if (live.length) {
+          live = [];
+          layersDirty = true;
+        }
+      } else if (now >= introEndMs(st.cfg)) {
+        step(now, dt);
+      }
       if (layersDirty) buildLayers();
       draw(now);
       raf = requestAnimationFrame(tick);
@@ -638,7 +709,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
       raf = 0;
       stillRaf = 0;
     };
-  }, []);
+  }, [handoff]);
 
   return <canvas ref={canvasRef} className={styles.field} aria-hidden="true" />;
 }

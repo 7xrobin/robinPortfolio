@@ -94,6 +94,21 @@ export interface FieldConfig {
     /** A fill or a lit node fades in over this long once the trace has passed it. */
     settleMs: number;
   };
+  /** The scroll handoff from the hero's field to the work section's. Each
+   *  field's presence (0 = nothing drawn, 1 = the whole design) maps to a
+   *  time on the intro's trace (presenceTime), so scrolling plays the trace
+   *  top-down: the hero's backwards as it leaves, the work field's forwards
+   *  as it enters. Fractions of the viewport height. */
+  handoff: {
+    /** The hero field is gone once the hero's bottom is this far from the
+     *  viewport's top. */
+    leaveEndAt: number;
+    /** The work field starts tracing when the section's top is this far
+     *  from the viewport's top... */
+    enterStartAt: number;
+    /** ...and is whole once it is this far. */
+    enterEndAt: number;
+  };
   maxDpr: number;
 }
 
@@ -138,6 +153,11 @@ export const FIELD: FieldConfig = {
     edgeMs: 900,
     settleMs: 800,
   },
+  handoff: {
+    leaveEndAt: 0.4,
+    enterStartAt: 1,
+    enterEndAt: 0.3,
+  },
   maxDpr: 2,
 };
 
@@ -180,4 +200,13 @@ export function fieldConfig(mobile: boolean): FieldConfig {
 export function introEndMs(cfg: FieldConfig): number {
   const { traceStartMs, spreadMs, edgeMs, settleMs } = cfg.intro;
   return traceStartMs + spreadMs + edgeMs + settleMs;
+}
+
+/**
+ * The time on the intro's trace at which a field has presence `p` (0..1):
+ * nothing is drawn at 0, the whole design at 1.
+ */
+export function presenceTime(cfg: FieldConfig, p: number): number {
+  const { traceStartMs } = cfg.intro;
+  return traceStartMs + p * (introEndMs(cfg) - traceStartMs);
 }
