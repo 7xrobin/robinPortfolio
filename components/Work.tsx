@@ -11,9 +11,9 @@ export default function Work() {
       data-screen-label="02 Work"
       aria-labelledby="work-title"
     >
-      <TriangleField handoff="enter" />
-      {/* Where the field is anchored: an invisible frame, like the hero's portrait. */}
-      <div className={styles.anchor} data-field="frame" aria-hidden="true" />
+      {/* Anchored on the hero's portrait frame, so its triangles sit on the
+          hero's lattice and continue its field down the page. */}
+      <TriangleField handoff="enter" anchor='#top [data-field="frame"]' />
       <div className={styles.inner}>
         <h2 id="work-title" className={styles["work-title"]}>
           Work

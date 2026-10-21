@@ -103,11 +103,31 @@ export interface FieldConfig {
     /** The hero field is gone once the hero's bottom is this far from the
      *  viewport's top. */
     leaveEndAt: number;
-    /** The work field starts tracing when the section's top is this far
+    /** The work field starts growing when the section's top is this far
      *  from the viewport's top... */
     enterStartAt: number;
-    /** ...and is whole once it is this far. */
-    enterEndAt: number;
+    /** ...and is whole once this share of the section's height has scrolled
+     *  past that line, so the growth keeps pace with the scroll. */
+    enterWholeAt: number;
+  };
+  /** The work section's field (lib/field/grow.ts): triangles grown on the
+   *  hero's lattice, continuing its field down the page. */
+  grow: {
+    /** The noise that picks the triangles has blobs about this many cells across. */
+    clusterCells: number;
+    /** (t, share) stops along the section's width, t = x / width: about
+     *  this share of the cells hold a triangle. */
+    density: readonly FadeStop[];
+    /** The density ramps up from 0 over this many cells below the section's
+     *  top, so the field starts ragged instead of on a straight line. */
+    topRampCells: number;
+    /** (t, value) stops along the width: the field's fade, like the design's. */
+    fade: readonly FadeStop[];
+    /** Odds that a triangle takes a fill, and the fill's opacity range. */
+    fillChance: number;
+    fillOpacity: { opacityMin: number; opacityMax: number };
+    /** Odds that a triangle's node is lit. */
+    litChance: number;
   };
   maxDpr: number;
 }
@@ -156,7 +176,24 @@ export const FIELD: FieldConfig = {
   handoff: {
     leaveEndAt: 0.4,
     enterStartAt: 1,
-    enterEndAt: 0.3,
+    enterWholeAt: 0.9,
+  },
+  grow: {
+    clusterCells: 3.5,
+    density: [
+      [0, 0.62],
+      [0.5, 0.5],
+      [1, 0.38],
+    ],
+    topRampCells: 4,
+    fade: [
+      [0, 1],
+      [0.5, 0.75],
+      [1, 0.4],
+    ],
+    fillChance: 0.24,
+    fillOpacity: { opacityMin: 0.08, opacityMax: 0.3 },
+    litChance: 0.06,
   },
   maxDpr: 2,
 };

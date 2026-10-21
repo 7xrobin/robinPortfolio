@@ -22,6 +22,7 @@ import {
   type Excluded,
 } from "@/lib/field/changes";
 import { designShape, edgeKey, nodeKey, type EdgeKey } from "@/lib/field/shape";
+import { growField, stopsAt } from "@/lib/field/grow";
 import {
   cellNodes,
   designToSection,
@@ -49,6 +50,9 @@ const clamp01 = (u: number) => Math.min(1, Math.max(0, u));
 /** The order the trace reaches the design's elements in: outward from the
  *  frame centroid (the hero's intro), or top-down by `drop`. */
 type TraceOrder = "centroid" | "fromTop" | "fromBottom";
+
+/** Which field a TriangleField draws, and how the scroll moves it. */
+type Handoff = "leave" | "enter";
 
 /** A design node placed in the section. */
 interface PlacedNode extends Point {
@@ -100,7 +104,8 @@ interface FieldState {
   edges: PlacedEdge[];
   /** Edges crossing the design's left edge; drawn clipped to the box. */
   stubs: PlacedEdge[];
-  /** The design's 1280 × 760 box in section px; nothing is drawn outside it. */
+  /** Nothing is drawn outside this box: the design's 1280 × 760 box in
+   *  section px for the hero, the whole section for the grown work field. */
   box: Rect;
   fills: PlacedFill[];
   lit: PlacedLit[];
@@ -113,10 +118,11 @@ interface FieldState {
 }
 
 /**
- * Places every design element in the section: positions, weights,
- * distances to the frame centroid, which time the intro trace, and drops
- * down the design box, which time the scroll handoff. The weights fold in
- * the design's horizontal fade and the nav band, so nothing reaches into the
+ * Places every element in the section: positions, weights, distances to the
+ * frame centroid, which time the intro trace, and drops down the box, which
+ * time the scroll handoff. The hero places the design; the work field grows
+ * its own triangles on the same lattice, over the whole section. The weights
+ * fold in the horizontal fade and the nav band, so nothing reaches into the
  * nav bar.
  */
 function place(
@@ -124,7 +130,7 @@ function place(
   frame: Rect,
   navBottom: number | null,
   text: Rect | null,
-  changes: boolean,
+  handoff: Handoff,
 ) {
   // The static field put design point (320, 138.6), node (0, 0) of the design
   // data, on the frame's left corner x and apex y — not on the apex, which is
@@ -133,15 +139,26 @@ function place(
   const g = latticeFrame({ ...frame, left: frame.left - frame.width / 2 });
   st.g = g;
   const centre = frameCentroid(frame);
+  const grown = handoff === "enter";
+  const fadeAt = grown
+    ? (x: number) => stopsAt(st.cfg.grow.fade, x / Math.max(1, st.width))
+    : (x: number) => fade(x, g, st.cfg.fade);
   const at = ([r, c]: NodeKey): PlacedNode => {
     const p = nodePosition(g, r, c);
-    return { ...p, fade: fade(p.x, g, st.cfg.fade), band: navBand(p.y, navBottom, g.side, st.cfg.navBand) };
+    return { ...p, fade: fadeAt(p.x), band: navBand(p.y, navBottom, g.side, st.cfg.navBand) };
   };
   st.at = at;
   const dist = (x: number, y: number) => Math.hypot(x - centre.x, y - centre.y);
-  const b0 = designToSection(g, 0, 0);
-  const b1 = designToSection(g, DESIGN.width, DESIGN.height);
-  st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
+  if (grown) {
+    st.box = { left: 0, top: 0, width: st.width, height: st.height };
+  } else {
+    const b0 = designToSection(g, 0, 0);
+    const b1 = designToSection(g, DESIGN.width, DESIGN.height);
+    st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
+  }
+  const source = grown
+    ? { ...growField(g, st.box, st.cfg.grow), stubs: [] }
+    : { edges: DESIGN_EDGES, stubs: DESIGN_STUBS, fills: DESIGN_FILLS, lit: DESIGN_LIT };
   const drop = (y: number) => clamp01((y - st.box.top) / st.box.height);
   const edge = ([ka, kb]: readonly [NodeKey, NodeKey]): PlacedEdge => {
     let a = at(ka);
@@ -163,9 +180,9 @@ function place(
       drop: drop(down.a.y),
     };
   };
-  st.edges = DESIGN_EDGES.map(edge);
-  st.stubs = DESIGN_STUBS.map(edge);
-  st.fills = DESIGN_FILLS.map((f) => {
+  st.edges = source.edges.map(edge);
+  st.stubs = source.stubs.map(edge);
+  st.fills = source.fills.map((f) => {
     const [p, q, r] = cellNodes(f.cell).map(at);
     return {
       cell: f.cell,
@@ -177,7 +194,7 @@ function place(
       drop: drop((p.y + q.y + r.y) / 3),
     };
   });
-  st.lit = DESIGN_LIT.map((k) => {
+  st.lit = source.lit.map((k) => {
     const n = at(k);
     return {
       key: nodeKey(k),
@@ -191,7 +208,7 @@ function place(
   st.distMax = Math.max(1, ...st.edges.map((e) => e.dist), ...st.stubs.map((e) => e.dist));
   // The placement limits use the real frame (the portrait triangle), not
   // the shifted lattice anchor. A field without live changes has none.
-  st.elig = !changes ? null : eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
+  st.elig = grown ? null : eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
 }
 
 /**
@@ -219,12 +236,21 @@ function renderGlow(sprite: HTMLCanvasElement, st: FieldState): number {
   return size;
 }
 
-/** The design's line gradient, made on `ctx` (a gradient belongs to its context). */
+/**
+ * The design's line gradient, made on `ctx` (a gradient belongs to its
+ * context). Its ends are in design units, mapped onto the box: the design's
+ * own on the hero, stretched over the section for the work field.
+ */
 function lineGradient(ctx: CanvasRenderingContext2D, st: FieldState): CanvasGradient | string {
   const { lines } = st.cfg;
   if (!st.g) return lines.stops[0];
-  const p0 = designToSection(st.g, lines.from[0], lines.from[1]);
-  const p1 = designToSection(st.g, lines.to[0], lines.to[1]);
+  const { box } = st;
+  const map = ([X, Y]: readonly [number, number]) => ({
+    x: box.left + (X / DESIGN.width) * box.width,
+    y: box.top + (Y / DESIGN.height) * box.height,
+  });
+  const p0 = map(lines.from);
+  const p1 = map(lines.to);
   const grad = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
   lines.stops.forEach((c, i) => grad.addColorStop(i / Math.max(1, lines.stops.length - 1), c));
   return grad;
@@ -399,11 +425,13 @@ function renderTrace(
  * (lib/field/changes.ts). Scrolling away, it dissolves from the top down,
  * and its changes resume once it is fully back.
  *
- * The work section mounts it with `handoff="enter"`: a smaller copy behind
- * the cards, traced in from the top down as the section scrolls in, with no
- * live changes.
+ * The work section mounts it with `handoff="enter"` and `anchor` set to the
+ * hero's frame: triangles grown on the hero's lattice over the whole
+ * section (lib/field/grow.ts), so the hero's field reads as continuing down
+ * the page. They are traced in from the top down as the section scrolls in,
+ * with no live changes.
  */
-export default function TriangleField({ handoff }: { handoff: "leave" | "enter" }) {
+export default function TriangleField({ handoff, anchor }: { handoff: Handoff; anchor?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -413,7 +441,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
     if (!canvas || !section || !ctx) return;
 
     const pick = (name: string) => section.querySelector<HTMLElement>(`[data-field="${name}"]`);
-    const frameEl = pick("frame");
+    const frameEl = anchor ? document.querySelector<HTMLElement>(anchor) : pick("frame");
     const navEl = pick("nav");
     const textEl = pick("text");
     if (!frameEl) return;
@@ -469,11 +497,11 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
 
     /** The work section's enter progress, from where it sits in the viewport. */
     const enterProgress = () => {
-      const { enterStartAt, enterEndAt } = st.cfg.handoff;
-      const vh = window.innerHeight;
+      const { enterStartAt, enterWholeAt } = st.cfg.handoff;
       const rect = section.getBoundingClientRect();
-      return clamp01((enterStartAt * vh - rect.top) / Math.max(1, (enterStartAt - enterEndAt) * vh));
+      return clamp01((enterStartAt * window.innerHeight - rect.top) / Math.max(1, enterWholeAt * rect.height));
     };
+
 
     const buildLayers = () => {
       layersDirty = false;
@@ -507,7 +535,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
       canvas.height = Math.max(1, Math.round(st.height * st.dpr));
 
       if (frame.width > 0) {
-        place(st, frame, nav ? nav.top + nav.height : null, text, handoff === "leave");
+        place(st, frame, nav ? nav.top + nav.height : null, text, handoff);
       } else {
         st.g = null;
         st.elig = null;
@@ -767,7 +795,7 @@ export default function TriangleField({ handoff }: { handoff: "leave" | "enter" 
       raf = 0;
       stillRaf = 0;
     };
-  }, [handoff]);
+  }, [handoff, anchor]);
 
   return <canvas ref={canvasRef} className={styles.field} aria-hidden="true" />;
 }
