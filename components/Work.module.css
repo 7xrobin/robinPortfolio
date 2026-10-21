@@ -73,6 +73,7 @@
    peek in from the edge; scroll-padding keeps snapped cards aligned with
    the heading. Vertical padding leaves room for the cards' shadows. */
 .track {
+  container-type: inline-size;
   display: flex;
   gap: 24px;
   overflow-x: auto;
@@ -86,9 +87,11 @@
   scrollbar-color: color-mix(in srgb, var(--color-text) 24%, transparent) transparent;
 }
 
-/* Glass: a translucent surface that blurs whatever sits behind it. */
+/* Glass: a translucent surface that blurs whatever sits behind it. A card
+   and a half fill the row: the row shows from the first card's left edge
+   (one side padding in) to its own right edge. */
 .card {
-  flex: 0 0 clamp(280px, 32vw, 380px);
+  flex: 0 0 calc((100cqi + var(--work-pad) - 24px) / 1.5);
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
