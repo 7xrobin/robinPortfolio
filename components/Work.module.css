@@ -6,6 +6,13 @@
   position: relative;
   overflow: hidden;
   min-height: 80vh;
+  /* The scene change brings the work in after the hero has left: the stage
+     sets --work-enter (0..1) on its root; without a stage it is 1, the work
+     at rest. The title, then the controls, then the card rise in, each 0..1
+     over its own span of --work-enter, read by their base rules. */
+  --work-in-title: clamp(0, calc((var(--work-enter, 1) - 0.6) / 0.24), 1);
+  --work-in-controls: clamp(0, calc((var(--work-enter, 1) - 0.68) / 0.24), 1);
+  --work-in-card: clamp(0, calc((var(--work-enter, 1) - 0.76) / 0.24), 1);
   background:
     radial-gradient(700px 500px at 10% -10%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
     radial-gradient(800px 520px at 95% 110%, color-mix(in srgb, #33969b 18%, transparent), transparent 62%),
@@ -33,6 +40,8 @@
 }
 
 .work-title {
+  opacity: var(--work-in-title);
+  transform: translateY(calc(12px * (1 - var(--work-in-title))));
   margin: 0;
   font-size: clamp(32px, 3.4vw, 44px);
 }
@@ -57,6 +66,8 @@
    the heading. The gap is wider than the bleed plus a shadow, so no sliver
    of the next card shows. Vertical padding leaves room for the shadows. */
 .track {
+  opacity: var(--work-in-card);
+  transform: translateY(calc(12px * (1 - var(--work-in-card))));
   container-type: inline-size;
   display: flex;
   gap: calc(var(--work-pad) + 40px);
@@ -122,6 +133,8 @@
 
 /* Prev / next: round glass buttons beside the heading. */
 .controls {
+  opacity: var(--work-in-controls);
+  transform: translateY(calc(12px * (1 - var(--work-in-controls))));
   display: flex;
   gap: 10px;
 }
