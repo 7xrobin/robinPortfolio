@@ -6,7 +6,14 @@ import styles from "./Work.module.css";
 
 const TRACK_ID = "work-track";
 
-export default function WorkCarousel({ items }: { items: WorkItem[] }) {
+export default function WorkCarousel({
+  items,
+  onActiveChange,
+}: {
+  items: WorkItem[];
+  /** Called with the index of the card in view when it changes. */
+  onActiveChange?: (index: number) => void;
+}) {
   const trackRef = useRef<HTMLUListElement>(null);
   // The buttons stay hidden until mounted, so without JS there are no dead
   // buttons; the track still scrolls on its own.
@@ -21,6 +28,12 @@ export default function WorkCarousel({ items }: { items: WorkItem[] }) {
       const max = track.scrollWidth - track.clientWidth;
       setAtStart(track.scrollLeft <= 1);
       setAtEnd(track.scrollLeft >= max - 1);
+      // The card in view: one card per row, so the nearest card step.
+      const card = track.firstElementChild as HTMLElement | null;
+      if (card) {
+        const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+        onActiveChange?.(Math.round(track.scrollLeft / (card.getBoundingClientRect().width + gap)));
+      }
     };
     // Show the buttons once mounted; the effect is the client-only signal.
     setMounted(true);
@@ -32,7 +45,7 @@ export default function WorkCarousel({ items }: { items: WorkItem[] }) {
       track.removeEventListener("scroll", update);
       ro.disconnect();
     };
-  }, []);
+  }, [onActiveChange]);
 
   const step = (dir: 1 | -1) => {
     const track = trackRef.current;

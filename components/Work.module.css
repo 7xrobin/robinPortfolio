@@ -8,9 +8,8 @@
   min-height: 80vh;
   /* The scene change brings the work in after the hero has left: the stage
      sets --work-enter (0..1) on its root; without a stage it is 1, the work
-     at rest. The title, then the controls, then the card rise in, each 0..1
-     over its own span of --work-enter, read by their base rules. */
-  --work-in-title: clamp(0, calc((var(--work-enter, 1) - 0.6) / 0.24), 1);
+     at rest. The controls, then the card rise in, each 0..1 over its own
+     span of --work-enter, read by their base rules. */
   --work-in-controls: clamp(0, calc((var(--work-enter, 1) - 0.68) / 0.24), 1);
   --work-in-card: clamp(0, calc((var(--work-enter, 1) - 0.76) / 0.24), 1);
   background:
@@ -39,13 +38,6 @@
   row-gap: 8px;
 }
 
-.work-title {
-  opacity: var(--work-in-title);
-  transform: translateY(calc(12px * (1 - var(--work-in-title))));
-  margin: 0;
-  font-size: clamp(32px, 3.4vw, 44px);
-}
-
 .inner > ul {
   grid-column: 1 / -1;
 }
@@ -63,7 +55,7 @@
 
 /* The row of cards. It bleeds to the section's side padding so the cards'
    shadows are not clipped; scroll-padding keeps snapped cards aligned with
-   the heading. The gap is wider than the bleed plus a shadow, so no sliver
+   the content edge. The gap is wider than the bleed plus a shadow, so no sliver
    of the next card shows. Vertical padding leaves room for the shadows. */
 .track {
   opacity: var(--work-in-card);
@@ -83,7 +75,7 @@
 }
 
 /* Glass: a translucent surface that blurs whatever sits behind it. One card
-   fills the row, the track's content box, from the heading's left edge to
+   fills the row, the track's content box, from the content's left edge to
    its right edge. */
 .card {
   flex: 0 0 100%;
@@ -131,8 +123,9 @@
   list-style: none;
 }
 
-/* Prev / next: round glass buttons beside the heading. */
+/* Prev / next: round glass buttons above the card, at its right. */
 .controls {
+  grid-column: 2;
   opacity: var(--work-in-controls);
   transform: translateY(calc(12px * (1 - var(--work-in-controls))));
   display: flex;

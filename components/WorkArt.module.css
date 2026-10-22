@@ -1,10 +1,11 @@
 /* The work's triangle art: one SVG over the whole section, behind its
-   content. The stage sets --work-enter (0..1) on its root; without a stage
-   it is 1, the art at rest. The shade fades in over the first fifth; each
-   triangle traces over its own span, --t0 and --tw, set inline, then
-   fills. */
+   content, one layer per project. The stage sets --work-enter (0..1) on its
+   root; without a stage it is 1, the art at rest. Each layer's progress, --e,
+   is the lower of that and its own --art, which transitions to 1 when the
+   layer's project becomes active and back to 0 when it leaves. The shade
+   fades in over the first fifth of --e; each triangle traces over its own
+   span, --t0 and --tw, set inline, then fills. */
 .art {
-  --work-shade: clamp(0, calc(var(--work-enter, 1) / 0.2), 1);
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -13,8 +14,29 @@
   pointer-events: none;
 }
 
+/* Registered, so --art can transition and the trace plays between its ends.
+   A browser without @property swaps the art at once. */
+@property --art {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* The leaving project un-traces at once; the arriving one starts once the
+   old art is mostly gone, so the two read as one change. */
+.project {
+  --art: 0;
+  --e: min(var(--work-enter, 1), var(--art));
+  transition: --art 1.4s linear;
+}
+
+.project[data-active] {
+  --art: 1;
+  transition-delay: 0.7s;
+}
+
 .shade {
-  opacity: var(--work-shade);
+  opacity: clamp(0, calc(var(--e) / 0.2), 1);
 }
 
 /* The cluster sits beside and behind the card, so the glass has something
@@ -45,8 +67,8 @@
 }
 
 .tri {
-  --trace: clamp(0, calc((var(--work-enter, 1) - var(--t0)) / var(--tw)), 1);
-  --fill: clamp(0, calc((var(--work-enter, 1) - var(--t0) - 0.25) / 0.15), 1);
+  --trace: clamp(0, calc((var(--e) - var(--t0)) / var(--tw)), 1);
+  --fill: clamp(0, calc((var(--e) - var(--t0) - 0.25) / 0.15), 1);
 }
 
 /* Mask content: a shrinking offset reveals the outline apex -> right ->
@@ -77,6 +99,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .project {
+    transition: none;
+  }
+
   .tip {
     display: none;
   }

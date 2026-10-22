@@ -8,6 +8,22 @@ export interface WorkItem {
   imageAlt: string;
   href: string;
   tags: string[];
+  art: WorkArt;
+}
+
+/** The triangle art behind a project's card, in the language of its
+    placeholder picture: a radial shade, then triangles traced in and filled.
+    Triangles are listed by apex, in the art's cluster units (side 240). */
+export interface WorkArt {
+  /** Shade, outline and the fill gradient's start. */
+  color: string;
+  /** The fill gradient's end. */
+  color2: string;
+  /** The lit point riding the trace. */
+  tip: string;
+  /** Where the shade is centred, as SVG percentages. */
+  shadeAt: [string, string];
+  triangles: { x: number; y: number; fill: number }[];
 }
 
 export const WORK: WorkItem[] = [
@@ -20,6 +36,18 @@ export const WORK: WorkItem[] = [
     imageAlt: "Placeholder artwork for Project One",
     href: "#",
     tags: ["Next.js", "TypeScript", "Vercel"],
+    art: {
+      color: "#33969b",
+      color2: "#3a80b7",
+      tip: "#65d2d2",
+      shadeAt: ["78%", "30%"],
+      triangles: [
+        { x: 120, y: 0, fill: 0.1 },
+        { x: 180, y: 110, fill: 0.18 },
+        { x: 240, y: 0, fill: 0.26 },
+        { x: 300, y: 110, fill: 0.18 },
+      ],
+    },
   },
   {
     slug: "project-two",
@@ -30,6 +58,17 @@ export const WORK: WorkItem[] = [
     imageAlt: "Placeholder artwork for Project Two",
     href: "#",
     tags: ["Python", "AI", "Postgres"],
+    art: {
+      color: "#3a80b7",
+      color2: "#968ae0",
+      tip: "#7fb4e6",
+      shadeAt: ["22%", "80%"],
+      triangles: [
+        { x: 120, y: 0, fill: 0.1 },
+        { x: 240, y: 0, fill: 0.18 },
+        { x: 180, y: 110, fill: 0.26 },
+      ],
+    },
   },
   {
     slug: "project-three",
@@ -40,6 +79,17 @@ export const WORK: WorkItem[] = [
     imageAlt: "Placeholder artwork for Project Three",
     href: "#",
     tags: ["Figma", "React"],
+    art: {
+      color: "#968ae0",
+      color2: "#33969b",
+      tip: "#b5abfc",
+      shadeAt: ["55%", "12%"],
+      triangles: [
+        { x: 240, y: 0, fill: 0.1 },
+        { x: 180, y: 110, fill: 0.18 },
+        { x: 300, y: 110, fill: 0.26 },
+      ],
+    },
   },
   {
     slug: "project-four",
@@ -50,5 +100,17 @@ export const WORK: WorkItem[] = [
     imageAlt: "Placeholder artwork for Project Four",
     href: "#",
     tags: ["React", "TypeScript", "Postgres", "AI"],
+    art: {
+      color: "#33969b",
+      color2: "#968ae0",
+      tip: "#65d2d2",
+      shadeAt: ["85%", "85%"],
+      triangles: [
+        { x: 180, y: 0, fill: 0.26 },
+        { x: 120, y: 110, fill: 0.1 },
+        { x: 300, y: 0, fill: 0.18 },
+        { x: 360, y: 110, fill: 0.1 },
+      ],
+    },
   },
 ];
