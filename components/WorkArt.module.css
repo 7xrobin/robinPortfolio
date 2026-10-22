@@ -1,0 +1,83 @@
+/* The work's triangle art: one SVG over the whole section, behind its
+   content. The stage sets --work-enter (0..1) on its root; without a stage
+   it is 1, the art at rest. The shade fades in over the first fifth; each
+   triangle traces over its own span, --t0 and --tw, set inline, then
+   fills. */
+.art {
+  --work-shade: clamp(0, calc(var(--work-enter, 1) / 0.2), 1);
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.shade {
+  opacity: var(--work-shade);
+}
+
+/* The cluster sits beside and behind the card, so the glass has something
+   to blur. Phone: straddling the card's bottom edge on the right. */
+.cluster {
+  transform-box: view-box;
+  transform: translate(calc(100% - 300px), 440px) scale(0.75);
+}
+
+@media (min-width: 561px) {
+  .cluster {
+    transform: translate(calc(50% + 40px), 120px) scale(1.2);
+  }
+}
+
+/* Desktop: behind the card's text half, peeking out above it and past its
+   right edge. */
+@media (min-width: 900px) {
+  .cluster {
+    transform: translate(calc(50% + 60px), 120px) scale(1.1);
+  }
+}
+
+@media (min-width: 1200px) {
+  .cluster {
+    transform: translate(calc(50% + 170px), 120px) scale(1.3);
+  }
+}
+
+.tri {
+  --trace: clamp(0, calc((var(--work-enter, 1) - var(--t0)) / var(--tw)), 1);
+  --fill: clamp(0, calc((var(--work-enter, 1) - var(--t0) - 0.25) / 0.15), 1);
+}
+
+/* Mask content: a shrinking offset reveals the outline apex -> right ->
+   left -> apex. The dash is longer than the 720-unit perimeter, so at rest
+   the outline closes. */
+.trace {
+  stroke-dasharray: 730 730;
+  stroke-dashoffset: calc(730px - 720px * var(--trace));
+}
+
+/* Untraced, the mask's round cap still draws its zero-length dash as a
+   speck at the apex: the outline shows only once the trace has begun. */
+.line {
+  opacity: clamp(0, calc(var(--trace) * 1000), 1);
+}
+
+.fill {
+  opacity: var(--fill);
+}
+
+/* The lit point riding the trace's tip, shown only mid-trace. */
+.tip {
+  opacity: clamp(0, min(calc(var(--trace) * 30), calc((1 - var(--trace)) * 30)), 1);
+  transform-box: view-box;
+  transform-origin: 0 0;
+  offset-rotate: 0deg;
+  offset-distance: calc(var(--trace) * 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    display: none;
+  }
+}
