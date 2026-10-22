@@ -15,15 +15,19 @@
   --intro-portrait-fade-duration: 1000ms;
   /* The text timings and --intro-ease live on :root in app/globals.css,
      shared with the nav. */
-  /* Scrolling away plays the frame's intro backwards with the field:
-     TriangleField sets --hero-leave (0..1) on the section. The portrait
-     fades out, then the fill and glow, then the outline un-traces back to
-     the apex. Each is 0..1 over its own span of --hero-leave. The base
-     rules read these, so the intro keyframes, which only set `from`, end on
-     them too. */
-  --leave-portrait: clamp(0, calc(var(--hero-leave, 0) / 0.35), 1);
-  --leave-fill: clamp(0, calc((var(--hero-leave, 0) - 0.25) / 0.25), 1);
-  --leave-trace: clamp(0, calc((var(--hero-leave, 0) - 0.4) / 0.55), 1);
+  /* Scrolling away plays the hero's intro backwards with the field:
+     TriangleField sets --hero-leave (0..1) on the section. The text leaves
+     first, in the reverse of its intro order (sub, h1, hello), then the
+     portrait fades out, then the fill and glow, then the outline un-traces
+     back to the apex. Each is 0..1 over its own span of --hero-leave. The
+     base rules read these, so the intro keyframes, which only set `from`,
+     end on them too. */
+  --leave-text-sub: clamp(0, calc(var(--hero-leave, 0) / 0.16), 1);
+  --leave-text-h1: clamp(0, calc((var(--hero-leave, 0) - 0.06) / 0.16), 1);
+  --leave-text-hello: clamp(0, calc((var(--hero-leave, 0) - 0.12) / 0.16), 1);
+  --leave-portrait: clamp(0, calc((var(--hero-leave, 0) - 0.22) / 0.2), 1);
+  --leave-fill: clamp(0, calc((var(--hero-leave, 0) - 0.36) / 0.16), 1);
+  --leave-trace: clamp(0, calc((var(--hero-leave, 0) - 0.46) / 0.34), 1);
   background:
     radial-gradient(900px 560px at 85% -120px, color-mix(in srgb, oklch(0.42 0.08 225) 45%, transparent), transparent 62%),
     radial-gradient(700px 500px at 10% 110%, color-mix(in srgb, var(--color-accent-900) 70%, transparent), transparent 60%),
@@ -138,6 +142,8 @@
 }
 
 .hero-hello {
+  opacity: calc(1 - var(--leave-text-hello));
+  transform: translateY(calc(12px * var(--leave-text-hello)));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -150,6 +156,8 @@
 }
 
 .hero h1 {
+  opacity: calc(1 - var(--leave-text-h1));
+  transform: translateY(calc(12px * var(--leave-text-h1)));
   font-family: var(--font-outfit), var(--font-heading);
   font-weight: 300;
   font-size: var(--h1-size);
@@ -166,6 +174,8 @@
 }
 
 .hero-sub {
+  opacity: calc(1 - var(--leave-text-sub));
+  transform: translateY(calc(12px * var(--leave-text-sub)));
   font-size: var(--sub-size);
   line-height: 1.65;
   max-width: 46ch;
