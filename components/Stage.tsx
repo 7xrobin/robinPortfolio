@@ -21,6 +21,13 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
  * `--scene`, `--hero-leave` (the hero's half), `--work-enter` (the work's
  * half), plus `data-scene` and `data-leaving`.
  *
+ * Hash links and focus land in the scenes: `#work` is a mark at the end of
+ * the track, so the nav's Work link scrolls there and plays the change, and
+ * `#top` names no element, so it scrolls to the document top and plays it
+ * back. Focus moving into the work while the hero shows scrolls to the mark
+ * too. The inactive scene takes no pointer events, and the hero is hidden
+ * from assistive tech while the work shows; the work never is.
+ *
  * The pin is opt-in: `data-staged` is set only when motion is allowed, and
  * follows the preference live. Without it (or without JS) the two sections
  * stack at rest, and the CSS defaults read as "at rest".
@@ -35,16 +42,23 @@ export default function Stage({
   work: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const workRef = useRef<HTMLDivElement>(null);
+  const markRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    const heroScene = heroRef.current;
+    const workScene = workRef.current;
+    const mark = markRef.current;
+    if (!root || !heroScene || !workScene || !mark) return;
 
     let scene = 0;
     let target = 0;
     let raf = 0;
     let last = -1;
     let staged = false;
+    let first = true;
 
     /** How far down the track the page is, 0..1. */
     const progress = () =>
@@ -70,6 +84,13 @@ export default function Stage({
 
     const showScene = () => {
       root.dataset.scene = target === 1 ? "work" : "hero";
+      if (target === 1) heroScene.setAttribute("aria-hidden", "true");
+      else heroScene.removeAttribute("aria-hidden");
+    };
+
+    // Tabbing into the work while the hero shows: go to the work scene.
+    const onFocusIn = () => {
+      if (staged && target === 0) mark.scrollIntoView();
     };
 
     const onScroll = () => {
@@ -88,14 +109,20 @@ export default function Stage({
       if (staged) return;
       staged = true;
       root.setAttribute("data-staged", "");
-      // Already past the threshold (a reload, a hash link): the work scene,
-      // with no tween.
-      target = progress() > WORK_AT ? 1 : 0;
+      // Already past the threshold (a reload), or opened on `/#work`: the
+      // work scene, with no tween. The fragment scroll can come after this
+      // runs, so the hash is read too, and the page goes to the mark now.
+      const atWork = progress() > WORK_AT;
+      const toWork = first && !atWork && window.location.hash === "#work";
+      first = false;
+      if (toWork) mark.scrollIntoView({ behavior: "instant" });
+      target = atWork || toWork ? 1 : 0;
       scene = target;
       showScene();
       write();
       window.addEventListener("scroll", onScroll, { passive: true });
       window.addEventListener("resize", onScroll);
+      workScene.addEventListener("focusin", onFocusIn);
     };
 
     const unstage = () => {
@@ -105,6 +132,8 @@ export default function Stage({
       raf = 0;
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      workScene.removeEventListener("focusin", onFocusIn);
+      heroScene.removeAttribute("aria-hidden");
       root.removeAttribute("data-staged");
       root.removeAttribute("data-scene");
       root.removeAttribute("data-leaving");
@@ -126,9 +155,14 @@ export default function Stage({
     <div ref={rootRef} data-stage className={styles.root}>
       {nav}
       <div className={styles.pin}>
-        <div className={styles.heroScene}>{hero}</div>
-        <div className={styles.workScene}>{work}</div>
+        <div ref={heroRef} className={styles.heroScene}>
+          {hero}
+        </div>
+        <div ref={workRef} className={styles.workScene}>
+          {work}
+        </div>
       </div>
+      <span ref={markRef} id="work" className={styles.mark} />
     </div>
   );
 }

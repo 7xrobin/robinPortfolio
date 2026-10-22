@@ -3,7 +3,7 @@ import TriangleField from "./TriangleField";
 
 export default function Hero() {
   return (
-    <section id="top" className={styles.hero} data-screen-label="01 Hero">
+    <section className={styles.hero} data-screen-label="01 Hero">
       <TriangleField />
       <div className={styles["hero-inner"]}>
         <div className={styles["hero-img"]} data-field="frame">

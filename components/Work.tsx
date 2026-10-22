@@ -5,7 +5,6 @@ import WorkCarousel from "./WorkCarousel";
 export default function Work() {
   return (
     <section
-      id="work"
       className={styles.work}
       data-screen-label="02 Work"
       aria-labelledby="work-title"

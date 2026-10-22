@@ -22,3 +22,16 @@
   position: absolute;
   inset: 0;
 }
+
+/* The inactive scene lets clicks through to the active one. */
+.root[data-staged][data-scene="hero"] .workScene,
+.root[data-staged][data-scene="work"] .heroScene {
+  pointer-events: none;
+}
+
+/* `#work`: the end of the track, where the work scene is at rest. Stacked,
+   it sits after the work section. */
+.root[data-staged] .mark {
+  position: absolute;
+  bottom: 0;
+}
