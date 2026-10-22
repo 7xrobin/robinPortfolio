@@ -1,0 +1,59 @@
+/* The page's nav bar, over the top of the hero. It spans the hero's content
+   width, so it lines up with the hero as it did inside it. TriangleField
+   measures it ([data-field="nav"]) to keep the field below the bar. */
+.nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  max-width: 1280px;
+  margin: 0 auto;
+  height: var(--nav-h);
+  padding: 0 clamp(20px, 5vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: block;
+  height: var(--logo-h);
+  aspect-ratio: 361.1 / 128.93;
+  background-color: var(--color-text);
+  -webkit-mask: url(/robin-logo.svg) center / contain no-repeat;
+  mask: url(/robin-logo.svg) center / contain no-repeat;
+}
+
+.links {
+  display: flex;
+  gap: 32px;
+  font-size: 14px;
+}
+
+/* The links rise in last, after the hero's text (timings on :root in
+   app/globals.css). */
+.links a {
+  color: color-mix(in srgb, var(--color-text) 72%, transparent);
+  animation: rise var(--intro-text-duration) var(--intro-ease) both;
+  animation-delay: calc(var(--intro-text-delay) + 3 * var(--intro-text-step));
+}
+
+.links a:hover {
+  color: var(--color-text);
+}
+
+/* Keyframe names are scoped per CSS module, so the nav keeps its own copy
+   of the hero's rise. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .links a {
+    animation: none;
+  }
+}

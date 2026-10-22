@@ -416,7 +416,9 @@ export default function TriangleField() {
 
     const pick = (name: string) => section.querySelector<HTMLElement>(`[data-field="${name}"]`);
     const frameEl = pick("frame");
-    const navEl = pick("nav");
+    // The nav is not in the section: it sits over the page's top. It is still
+    // measured against the section, which scrolls with it.
+    const navEl = document.querySelector<HTMLElement>('[data-field="nav"]');
     const textEl = pick("text");
     if (!frameEl) return;
 

@@ -122,6 +122,12 @@ img { display: block; max-width: 100%; }
   --text-pad: 64px 0 96px;
   --h1-size: clamp(44px, 4.6vw, 58px);
   --sub-size: 17px;
+  /* The hero text's and the nav's intro timings (the rest are on .hero in
+     components/Hero.module.css). CSS, so the intro runs without JS. */
+  --intro-text-delay: 4350ms;
+  --intro-text-step: 200ms;
+  --intro-text-duration: 800ms;
+  --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (min-width: 561px) and (max-width: 1080px) {
   :root {

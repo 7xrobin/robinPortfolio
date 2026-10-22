@@ -13,10 +13,8 @@
   --intro-fill-duration: 800ms;
   --intro-portrait-fade-delay: 3750ms;
   --intro-portrait-fade-duration: 1000ms;
-  --intro-text-delay: 4350ms;
-  --intro-text-step: 200ms;
-  --intro-text-duration: 800ms;
-  --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The text timings and --intro-ease live on :root in app/globals.css,
+     shared with the nav. */
   /* Scrolling away plays the frame's intro backwards with the field:
      TriangleField sets --hero-leave (0..1) on the section. The portrait
      fades out, then the fill and glow, then the outline un-traces back to
@@ -42,44 +40,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--hero-gap);
-}
-
-.hero-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  height: var(--nav-h);
-  padding: 0 clamp(20px, 5vw, 72px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.hero-logo {
-  display: block;
-  height: var(--logo-h);
-  aspect-ratio: 361.1 / 128.93;
-  background-color: var(--color-text);
-  -webkit-mask: url(/robin-logo.svg) center / contain no-repeat;
-  mask: url(/robin-logo.svg) center / contain no-repeat;
-}
-
-.hero-links {
-  display: flex;
-  gap: 32px;
-  font-size: 14px;
-}
-
-.hero-links a {
-  color: color-mix(in srgb, var(--color-text) 72%, transparent);
-  animation: hero-rise var(--intro-text-duration) var(--intro-ease) both;
-  animation-delay: calc(var(--intro-text-delay) + 3 * var(--intro-text-step));
-}
-
-.hero-links a:hover {
-  color: var(--color-text);
 }
 
 /* The frame is equilateral (480 × 415.7 at full size) and exactly 12 lattice
@@ -282,8 +242,7 @@
   .hero-portrait img,
   .hero-hello,
   .hero h1,
-  .hero-sub,
-  .hero-links a {
+  .hero-sub {
     animation: none;
   }
 }

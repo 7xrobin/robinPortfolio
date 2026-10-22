@@ -6,14 +6,6 @@ export default function Hero() {
     <section id="top" className={styles.hero} data-screen-label="01 Hero">
       <TriangleField />
       <div className={styles["hero-inner"]}>
-        <nav className={styles["hero-nav"]} data-field="nav" aria-label="Main">
-          <a href="#top" className={styles["hero-logo"]} aria-label="Robin — home"></a>
-          <div className={styles["hero-links"]}>
-            <a href="#work">Work</a>
-            <a href="#about">About</a>
-          </div>
-        </nav>
-
         <div className={styles["hero-img"]} data-field="frame">
           <svg
             className={styles["hero-frame"]}
