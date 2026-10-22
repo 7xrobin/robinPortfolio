@@ -26,7 +26,9 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
  * `#top` names no element, so it scrolls to the document top and plays it
  * back. Focus moving into the work while the hero shows scrolls to the mark
  * too. The inactive scene takes no pointer events, and the hero is hidden
- * from assistive tech while the work shows; the work never is.
+ * from assistive tech while the work shows; the work never is. While the
+ * work shows, the nav's Work link carries `aria-current`, which also marks
+ * it on screen.
  *
  * The pin is opt-in: `data-staged` is set only when motion is allowed, and
  * follows the preference live. Without it (or without JS) the two sections
@@ -52,6 +54,7 @@ export default function Stage({
     const workScene = workRef.current;
     const mark = markRef.current;
     if (!root || !heroScene || !workScene || !mark) return;
+    const workLink = root.querySelector<HTMLAnchorElement>('nav a[href="#work"]');
 
     let scene = 0;
     let target = 0;
@@ -84,8 +87,13 @@ export default function Stage({
 
     const showScene = () => {
       root.dataset.scene = target === 1 ? "work" : "hero";
-      if (target === 1) heroScene.setAttribute("aria-hidden", "true");
-      else heroScene.removeAttribute("aria-hidden");
+      if (target === 1) {
+        heroScene.setAttribute("aria-hidden", "true");
+        workLink?.setAttribute("aria-current", "location");
+      } else {
+        heroScene.removeAttribute("aria-hidden");
+        workLink?.removeAttribute("aria-current");
+      }
     };
 
     // Tabbing into the work while the hero shows: go to the work scene.
@@ -134,6 +142,7 @@ export default function Stage({
       window.removeEventListener("resize", onScroll);
       workScene.removeEventListener("focusin", onFocusIn);
       heroScene.removeAttribute("aria-hidden");
+      workLink?.removeAttribute("aria-current");
       root.removeAttribute("data-staged");
       root.removeAttribute("data-scene");
       root.removeAttribute("data-leaving");

@@ -40,13 +40,40 @@
 /* The links rise in last, after the hero's text (timings on :root in
    app/globals.css). */
 .links a {
+  position: relative;
   color: color-mix(in srgb, var(--color-text) 72%, transparent);
+  transition: color 0.4s var(--intro-ease);
   animation: rise var(--intro-text-duration) var(--intro-ease) both;
   animation-delay: calc(var(--intro-text-delay) + 3 * var(--intro-text-step));
 }
 
 .links a:hover {
   color: var(--color-text);
+}
+
+/* The section in view (the stage sets aria-current on the Work link while
+   the work shows): accent colour and an underline that draws left to
+   right. */
+.links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--intro-ease);
+}
+
+.links a[aria-current] {
+  color: var(--color-accent-400);
+}
+
+.links a[aria-current]::after {
+  transform: scaleX(1);
 }
 
 /* Keyframe names are scoped per CSS module, so the nav keeps its own copy
@@ -59,7 +86,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .links a {
+  .links a,
+  .links a::after {
     animation: none;
+    transition: none;
   }
 }
