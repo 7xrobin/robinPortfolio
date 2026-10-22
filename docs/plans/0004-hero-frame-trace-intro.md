@@ -3,9 +3,9 @@ number: "0004"
 type: plan
 slug: hero-frame-trace-intro
 title: Trace the portrait frame edge by edge and fade the portrait in
-status: planned
+status: done
 created: 2026-10-20
-tags: [plan, status/planned]
+tags: [plan, status/done]
 ---
 
 # 0004 — Plan: trace the portrait frame edge by edge and fade the portrait in

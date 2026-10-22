@@ -3,9 +3,9 @@ number: "0005"
 type: plan
 slug: work-section-carousel
 title: Work section with glass project cards, and the hero field handing off to it on scroll
-status: planned
+status: done
 created: 2026-10-21
-tags: [plan, status/planned]
+tags: [plan, status/done]
 ---
 
 # 0005 — Plan: work section with glass project cards, and the scroll handoff

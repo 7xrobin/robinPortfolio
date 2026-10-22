@@ -3,15 +3,15 @@ number: "0005"
 type: spec
 slug: work-section-carousel
 title: Work section with glass project cards, and the hero field handing off to it on scroll
-status: planned
+status: done
 created: 2026-10-21
 headline: Visitors can now scroll from the hero into a Work section — the hero's triangles dissolve from the top down and a smaller field traces in behind a sideways-scrolling row of glass project cards.
-tags: [spec, status/planned]
+tags: [spec, status/done]
 ---
 
 # 0005 — Work section with glass project cards, and the hero field handing off to it on scroll
 
-**Status:** planned — plan written, no code yet. Today the page is the hero alone (`app/page.tsx` renders
+**Status:** done — landed `9065836`..`a98cc08` (`components/Work.tsx`, `WorkCarousel.tsx`, `TriangleField.tsx`). Before it, today the page is the hero alone (`app/page.tsx` renders
 `<Hero />`); there is no section below it, and the nav's only link (`#about`,
 `components/Hero.tsx:11`) points at nothing.
 **Build doc:** `docs/plans/0005-work-section-carousel.md` — run with `/exec`.

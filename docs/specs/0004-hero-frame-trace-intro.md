@@ -3,15 +3,15 @@ number: "0004"
 type: spec
 slug: hero-frame-trace-intro
 title: Trace the portrait frame edge by edge and fade the portrait in
-status: planned
+status: done
 created: 2026-10-20
 headline: Visitors now see the portrait's triangle drawn edge by edge, the way the background triangles are, while the field ripples out — then the portrait fades in.
-tags: [spec, status/planned]
+tags: [spec, status/done]
 ---
 
 # 0004 — Trace the portrait frame edge by edge and fade the portrait in
 
-**Status:** planned — landed `2d702c2`..`371c958`, awaiting the owner's review by eye. Before it, today the whole frame SVG fades and scales in from its apex
+**Status:** done — landed `2d702c2`..`371c958`, owner's review by eye still open. Before it, today the whole frame SVG fades and scales in from its apex
 (`hero-frame-in`, `opacity 0 → 1` + `scale(0.92 → 1)`, 600 ms starting at 1100 ms) and the portrait
 image is uncovered from top to bottom (`hero-portrait-in`, a `clip-path: inset()` wipe on
 `.hero-portrait img`, 700 ms starting at 1450 ms), both in `components/Hero.module.css`
