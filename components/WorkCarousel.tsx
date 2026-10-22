@@ -103,7 +103,7 @@ export default function WorkCarousel({ items }: { items: WorkItem[] }) {
               ))}
             </ul>
             <a
-              className="btn btn-primary"
+              className={`btn btn-primary ${styles["card-link"]}`}
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"

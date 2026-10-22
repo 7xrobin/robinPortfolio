@@ -39,13 +39,14 @@
   }
 }
 
-/* The row of cards. It bleeds to the section's side padding so a card can
-   peek in from the edge; scroll-padding keeps snapped cards aligned with
-   the heading. Vertical padding leaves room for the cards' shadows. */
+/* The row of cards. It bleeds to the section's side padding so the cards'
+   shadows are not clipped; scroll-padding keeps snapped cards aligned with
+   the heading. The gap is wider than the bleed plus a shadow, so no sliver
+   of the next card shows. Vertical padding leaves room for the shadows. */
 .track {
   container-type: inline-size;
   display: flex;
-  gap: 24px;
+  gap: calc(var(--work-pad) + 40px);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--work-pad);
@@ -57,11 +58,11 @@
   scrollbar-color: color-mix(in srgb, var(--color-text) 24%, transparent) transparent;
 }
 
-/* Glass: a translucent surface that blurs whatever sits behind it. A card
-   and a half fill the row: the row shows from the first card's left edge
-   (one side padding in) to its own right edge. */
+/* Glass: a translucent surface that blurs whatever sits behind it. One card
+   fills the row, the track's content box, from the heading's left edge to
+   its right edge. */
 .card {
-  flex: 0 0 calc((100cqi + var(--work-pad) - 24px) / 1.5);
+  flex: 0 0 100%;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -142,9 +143,44 @@
   cursor: default;
 }
 
-@media (max-width: 560px) {
+/* Desktop: the card splits, picture on the left, text on the right. The
+   empty flexible rows above and below take the picture's extra height, so
+   the text stays one tight block, centred beside it. */
+@media (min-width: 900px) {
   .card {
-    flex-basis: 82%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-rows: 1fr repeat(4, auto) 1fr;
+    grid-template-areas:
+      "img ."
+      "img title"
+      "img desc"
+      "img tags"
+      "img link"
+      "img .";
+    column-gap: 32px;
+    align-content: center;
+  }
+
+  .card-title {
+    grid-area: title;
+  }
+
+  .card-img {
+    grid-area: img;
+  }
+
+  .card-desc {
+    grid-area: desc;
+  }
+
+  .card-tags {
+    grid-area: tags;
+  }
+
+  .card-link {
+    grid-area: link;
+    justify-self: start;
   }
 }
 
