@@ -11,14 +11,14 @@ tags: [spec, status/planned]
 
 # 0006 — Pinned scene change from the hero to the work section
 
-**Status:** planned — spec only. Today the hero and the work section are two stacked sections
+**Status:** planned — plan written, no code yet. Today the hero and the work section are two stacked sections
 (`app/page.tsx` renders `<Hero />` then `<Work />`, nothing after them): the hero's field
 dissolves and its frame un-traces as it scrolls up (`--hero-leave`, scroll-scrubbed by
 `TriangleField`), and the work section has its own grown `TriangleField`
 (`components/Work.tsx:16`) behind a carousel that shows a card and a half
 (`components/Work.module.css:63–64`, `.card` flex-basis; 82 % under 560 px, :145–149).
 **Hardened:** 2026-10-22 against `eb0014d`
-**Build doc:** `docs/plans/0006-scene-change-hero-to-work.md` (not written yet — `/planc`).
+**Build doc:** `docs/plans/0006-scene-change-hero-to-work.md` — run with `/exec`.
 
 ## Why
 
