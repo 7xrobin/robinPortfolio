@@ -119,6 +119,13 @@
   stroke-dashoffset: calc(1440px * var(--leave-trace));
 }
 
+/* Fully un-traced, the mask's round cap still draws its zero-length dash as
+   a speck at the apex; staged, the hero stays pinned under the work, so the
+   outline goes once the un-trace ends. */
+.hero-frame-line {
+  opacity: clamp(0, calc((1 - var(--leave-trace)) * 1000), 1);
+}
+
 /* The un-trace's tip: shown only while the outline is partly drawn. */
 .hero-frame-untip {
   opacity: clamp(0, min(calc(var(--leave-trace) * 30), calc((1 - var(--leave-trace)) * 30)), 1);
