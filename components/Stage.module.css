@@ -1,0 +1,24 @@
+/* The stage. Stacked by default (no JS, reduced motion): nothing here
+   applies. Staged, the root is one viewport of scene plus one of track; the
+   pin sticks to the top of the viewport for the whole track and holds both
+   scenes in the same place, the work over the hero. Nothing here or above
+   may set `overflow`, or the sticky pin stops sticking. */
+.root[data-staged] {
+  position: relative;
+  height: 200svh;
+}
+
+.root[data-staged] .pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+
+.root[data-staged] .heroScene {
+  height: 100%;
+}
+
+.root[data-staged] .workScene {
+  position: absolute;
+  inset: 0;
+}

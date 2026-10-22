@@ -15,8 +15,9 @@
   --intro-portrait-fade-duration: 1000ms;
   /* The text timings and --intro-ease live on :root in app/globals.css,
      shared with the nav. */
-  /* Scrolling away plays the hero's intro backwards with the field:
-     TriangleField sets --hero-leave (0..1) on the section. The text leaves
+  /* The scene change plays the hero's intro backwards with the field: the
+     stage (components/Stage.tsx) sets --hero-leave (0..1) on its root,
+     inherited here; without a stage it is 0, the hero at rest. The text leaves
      first, in the reverse of its intro order (sub, h1, hello), then the
      portrait fades out, then the fill and glow, then the outline un-traces
      back to the apex. Each is 0..1 over its own span of --hero-leave. The
@@ -44,6 +45,15 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--hero-gap);
+}
+
+/* Staged, the hero fills the stage's pinned screen. */
+:global([data-staged]) .hero {
+  height: 100%;
+}
+
+:global([data-staged]) .hero-inner {
+  min-height: 100%;
 }
 
 /* The frame is equilateral (480 × 415.7 at full size) and exactly 12 lattice
@@ -104,7 +114,7 @@
 /* Un-tracing: the dash only while leaving, so the outline at rest keeps
    its joins. A growing offset hides the outline from its end back to the
    apex, the trace played backwards. */
-.hero[data-leaving] .hero-frame-trace {
+:global([data-leaving]) .hero-frame-trace {
   stroke-dasharray: 1440 1440;
   stroke-dashoffset: calc(1440px * var(--leave-trace));
 }

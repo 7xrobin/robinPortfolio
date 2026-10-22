@@ -12,6 +12,14 @@
     var(--color-bg);
 }
 
+/* Staged, the work fills the pinned screen over the hero, whose background
+   stays the backdrop through both scenes. */
+:global([data-staged]) .work {
+  background: none;
+  min-height: 0;
+  height: 100%;
+}
+
 .inner {
   position: relative;
   z-index: 1;
@@ -36,6 +44,11 @@
 @media (max-width: 560px) {
   .inner {
     padding-block: 64px;
+  }
+
+  /* The fixed nav is taller than the padding there: clear it. */
+  :global([data-staged]) .inner {
+    padding-top: calc(var(--nav-h) + 16px);
   }
 }
 

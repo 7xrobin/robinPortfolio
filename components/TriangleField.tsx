@@ -7,7 +7,6 @@ import {
   MOBILE_QUERY,
   fieldConfig,
   introEndMs,
-  leaveEndAt,
   presenceTime,
   type FieldConfig,
 } from "@/lib/field/config";
@@ -66,7 +65,7 @@ interface PlacedEdge {
   weight: number;
   /** Distance of `a` to the frame centroid. */
   dist: number;
-  /** The edge, upper end first: scrolling away traces it from its upper end. */
+  /** The edge, upper end first: leaving traces it from its upper end. */
   down: { a: Point; b: Point };
   /** How far down the design box the upper end sits, 0..1. */
   drop: number;
@@ -117,7 +116,7 @@ interface FieldState {
 /**
  * Places the design in the section: positions, weights, distances to the
  * frame centroid, which time the intro trace, and drops down the box, which
- * time the scroll-away. The weights fold in the horizontal fade and the nav
+ * time the leave. The weights fold in the horizontal fade and the nav
  * band, so nothing reaches into the nav bar.
  */
 function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
@@ -328,7 +327,7 @@ function renderLines(
  * them. It is the same trace a rebuild draws after the intro, over the whole
  * design.
  *
- * Scrolling away draws the same trace in the `fromBottom` order: each
+ * Leaving draws the same trace in the `fromBottom` order: each
  * element starts later the higher it sits in the design box, so played
  * backwards the top goes first. It grows every edge from its upper end down.
  */
@@ -398,12 +397,13 @@ function renderTrace(
  * along the edge of the shape, chains of new triangles grow out of it,
  * triangles in the body are erased and traced again edge by edge, fills
  * change colour and points light and fade, each going back to the design
- * (lib/field/changes.ts). Scrolling away, it dissolves from the top down,
+ * (lib/field/changes.ts). As the hero leaves, it dissolves from the top down,
  * and its changes resume once it is fully back.
  *
- * It also sets `--hero-leave` (0..1) on the section, and `data-leaving`
- * while it is above 0, so the hero's CSS can play the portrait frame's
- * intro backwards with the field.
+ * How far the hero has left is the inline `--hero-leave` (0..1) of the
+ * nearest `[data-stage]`, which plays the scene change and sets it for the
+ * hero's CSS too; with no stage the hero never leaves. Once it is 1 the
+ * canvas is cleared and the loop parks until it drops again.
  */
 export default function TriangleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -416,8 +416,9 @@ export default function TriangleField() {
 
     const pick = (name: string) => section.querySelector<HTMLElement>(`[data-field="${name}"]`);
     const frameEl = pick("frame");
-    // The nav is not in the section: it sits over the page's top. It is still
-    // measured against the section, which scrolls with it.
+    // The nav is not in the section: it sits over the page's top (fixed when
+    // staged). It is still measured against the section: stacked, both scroll
+    // together; staged, the pinned section sits at the viewport top.
     const navEl = document.querySelector<HTMLElement>('[data-field="nav"]');
     const textEl = pick("text");
     if (!frameEl) return;
@@ -459,24 +460,13 @@ export default function TriangleField() {
     let due = 0;
     /** The cached layers no longer match the live changes. */
     let layersDirty = true;
-    /** How far the hero has scrolled away, 0..1: its field's presence is 1 − leave. */
+    /** How far the hero has left, 0..1: its field's presence is 1 − leave. */
     let leave = 0;
 
-    /** The hero's leave progress, from where the section sits in the viewport. */
-    const leaveProgress = () => {
-      const rect = section.getBoundingClientRect();
-      const end = rect.height - leaveEndAt(st.cfg) * window.innerHeight;
-      return clamp01(-rect.top / Math.max(1, end));
-    };
-
-    /** Hands the hero's leave progress to its CSS, when it changed. */
-    let sharedLeave = 0;
-    const shareLeave = () => {
-      if (leave === sharedLeave) return;
-      sharedLeave = leave;
-      section.style.setProperty("--hero-leave", leave.toFixed(4));
-      section.toggleAttribute("data-leaving", leave > 0);
-    };
+    // The stage sets --hero-leave inline on its root; reading the inline
+    // style is cheap, unlike a computed-style read. No stage: never leaves.
+    const stage = section.closest<HTMLElement>("[data-stage]");
+    const readLeave = () => parseFloat(stage?.style.getPropertyValue("--hero-leave") ?? "") || 0;
 
     const buildLayers = () => {
       layersDirty = false;
@@ -581,7 +571,7 @@ export default function TriangleField() {
     // reaches it; once every edge is traced and every fill settled, the cached
     // layers take over, with the live changes drawn on them. The time is
     // absolute, so a late hydration joins the trace where it already is
-    // instead of restarting it. Scrolling away plays the trace backwards to
+    // instead of restarting it. Leaving plays the trace backwards to
     // the hero's presence: during the intro on the intro's own order, after
     // it top-down, so the top rows go first.
     const draw = (now: number) => {
@@ -661,11 +651,10 @@ export default function TriangleField() {
         dirty = false;
         measure();
       }
-      leave = leaveProgress();
-      shareLeave();
+      leave = readLeave();
       if (leave > 0) {
-        // Scrolled away: the trace plays the design, so the live changes
-        // are dropped, and none start until the hero is fully back.
+        // Leaving: the trace plays the design, so the live changes are
+        // dropped, and none start until the hero is fully back.
         if (live.length) {
           live = [];
           layersDirty = true;
@@ -675,19 +664,25 @@ export default function TriangleField() {
       }
       if (layersDirty) buildLayers();
       draw(now);
-      raf = requestAnimationFrame(tick);
+      // Gone (the canvas is now empty): park until the stage wakes sync().
+      raf = leave >= 1 ? 0 : requestAnimationFrame(tick);
     };
 
-    // The loop runs only while the hero is on screen and the tab is visible.
+    // The loop runs only while the hero is on screen, not gone, and the tab
+    // is visible. The parked loop is not reading leave, so sync reads it.
     let onScreen = true;
     const sync = () => {
-      const visible = !reduced && onScreen && document.visibilityState === "visible";
+      leave = readLeave();
+      const gone = leave >= 1;
+      const visible = !reduced && onScreen && !gone && document.visibilityState === "visible";
       if (visible && !raf) {
         lastNow = -1;
         raf = requestAnimationFrame(tick);
       } else if (!visible && raf) {
         cancelAnimationFrame(raf);
         raf = 0;
+        // Parked before the loop drew the empty frame: draw it here.
+        if (gone && !reduced) draw(performance.now());
       }
     };
 
@@ -697,6 +692,9 @@ export default function TriangleField() {
     });
     io.observe(section);
     document.addEventListener("visibilitychange", sync);
+    // The stage writes --hero-leave every frame of its change: wake the loop.
+    const mo = new MutationObserver(sync);
+    if (stage) mo.observe(stage, { attributes: true, attributeFilter: ["style"] });
 
     const onMotionChange = (e: MediaQueryListEvent) => {
       reduced = e.matches;
@@ -704,7 +702,6 @@ export default function TriangleField() {
         // The still frame is the design itself: no change survives, and the
         // portrait frame is shown whole.
         leave = 0;
-        shareLeave();
         live = [];
         layersDirty = true;
         sync();
@@ -725,6 +722,7 @@ export default function TriangleField() {
 
     return () => {
       io.disconnect();
+      mo.disconnect();
       document.removeEventListener("visibilitychange", sync);
       reduce.removeEventListener("change", onMotionChange);
       ro.disconnect();
@@ -732,8 +730,6 @@ export default function TriangleField() {
       cancelAnimationFrame(stillRaf);
       raf = 0;
       stillRaf = 0;
-      section.style.removeProperty("--hero-leave");
-      section.removeAttribute("data-leaving");
     };
   }, []);
 

@@ -94,15 +94,6 @@ export interface FieldConfig {
     /** A fill or a lit node fades in over this long once the trace has passed it. */
     settleMs: number;
   };
-  /** The hero's scroll-away. The field's presence (0 = nothing drawn, 1 =
-   *  the whole design) maps to a time on the intro's trace (presenceTime),
-   *  so scrolling away plays the trace backwards, top rows first. Fractions
-   *  of the viewport height. */
-  handoff: {
-    /** The hero field is gone once the hero's bottom is this far from the
-     *  viewport's top. */
-    leaveEndAt: number;
-  };
   maxDpr: number;
 }
 
@@ -146,9 +137,6 @@ export const FIELD: FieldConfig = {
     spreadMs: 3600,
     edgeMs: 900,
     settleMs: 800,
-  },
-  handoff: {
-    leaveEndAt: 0.4,
   },
   maxDpr: 2,
 };
@@ -196,14 +184,10 @@ export function introEndMs(cfg: FieldConfig): number {
 
 /**
  * The time on the intro's trace at which a field has presence `p` (0..1):
- * nothing is drawn at 0, the whole design at 1.
+ * nothing is drawn at 0, the whole design at 1. The hero's leave (the stage's
+ * --hero-leave) plays it backwards, presence 1 − leave, top rows first.
  */
 export function presenceTime(cfg: FieldConfig, p: number): number {
   const { traceStartMs } = cfg.intro;
   return traceStartMs + p * (introEndMs(cfg) - traceStartMs);
-}
-
-/** Where the hero's field is gone, as a fraction of the viewport height. */
-export function leaveEndAt(cfg: FieldConfig): number {
-  return cfg.handoff.leaveEndAt;
 }

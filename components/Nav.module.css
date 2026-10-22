@@ -16,6 +16,12 @@
   justify-content: space-between;
 }
 
+/* Staged, the nav stays over both scenes of the pinned screen. Stacked, it
+   scrolls away with the hero, so it never lies backgroundless over the work. */
+:global([data-staged]) .nav {
+  position: fixed;
+}
+
 .logo {
   display: block;
   height: var(--logo-h);
