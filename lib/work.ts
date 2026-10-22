@@ -21,8 +21,6 @@ export interface WorkArt {
   color2: string;
   /** The lit point riding the trace. */
   tip: string;
-  /** Where the shade is centred, as SVG percentages. */
-  shadeAt: [string, string];
   triangles: { x: number; y: number; fill: number }[];
 }
 
@@ -40,7 +38,6 @@ export const WORK: WorkItem[] = [
       color: "#33969b",
       color2: "#3a80b7",
       tip: "#65d2d2",
-      shadeAt: ["78%", "30%"],
       triangles: [
         { x: 120, y: 0, fill: 0.1 },
         { x: 180, y: 110, fill: 0.18 },
@@ -62,7 +59,6 @@ export const WORK: WorkItem[] = [
       color: "#3a80b7",
       color2: "#968ae0",
       tip: "#7fb4e6",
-      shadeAt: ["22%", "80%"],
       triangles: [
         { x: 120, y: 0, fill: 0.1 },
         { x: 240, y: 0, fill: 0.18 },
@@ -83,7 +79,6 @@ export const WORK: WorkItem[] = [
       color: "#968ae0",
       color2: "#33969b",
       tip: "#b5abfc",
-      shadeAt: ["55%", "12%"],
       triangles: [
         { x: 240, y: 0, fill: 0.1 },
         { x: 180, y: 110, fill: 0.18 },
@@ -104,7 +99,6 @@ export const WORK: WorkItem[] = [
       color: "#33969b",
       color2: "#968ae0",
       tip: "#65d2d2",
-      shadeAt: ["85%", "85%"],
       triangles: [
         { x: 180, y: 0, fill: 0.26 },
         { x: 120, y: 110, fill: 0.1 },

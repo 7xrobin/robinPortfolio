@@ -392,7 +392,9 @@ function renderTrace(
  * canvas filling its section, placed on the section's `data-field="frame"`
  * element, faded to the right like the design and kept below the nav bar.
  *
- * The hero mounts it. The intro traces it edge by edge
+ * The hero mounts it. `mirror` flips it left to right: the canvas is
+ * flipped in CSS and the measured rects are flipped to match, so the design
+ * is placed as if the frame were on the left. The intro traces it edge by edge
  * outward from the frame centroid; after it, triangles dissolve and form
  * along the edge of the shape, chains of new triangles grow out of it,
  * triangles in the body are erased and traced again edge by edge, fills
@@ -405,7 +407,7 @@ function renderTrace(
  * hero's CSS too; with no stage the hero never leaves. Once it is 1 the
  * canvas is cleared and the loop parks until it drops again.
  */
-export default function TriangleField() {
+export default function TriangleField({ mirror = false }: { mirror?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -492,9 +494,10 @@ export default function TriangleField() {
       st.width = base.width;
       st.height = base.height;
       st.dpr = Math.min(window.devicePixelRatio || 1, st.cfg.maxDpr);
-      const frame = relativeRect(frameEl, base);
-      const nav = navEl ? relativeRect(navEl, base) : null;
-      const text = textEl ? relativeRect(textEl, base) : null;
+      const flip = (r: Rect): Rect => (mirror ? { ...r, left: st.width - r.left - r.width } : r);
+      const frame = flip(relativeRect(frameEl, base));
+      const nav = navEl ? flip(relativeRect(navEl, base)) : null;
+      const text = textEl ? flip(relativeRect(textEl, base)) : null;
 
       canvas.width = Math.max(1, Math.round(st.width * st.dpr));
       canvas.height = Math.max(1, Math.round(st.height * st.dpr));
@@ -731,7 +734,13 @@ export default function TriangleField() {
       raf = 0;
       stillRaf = 0;
     };
-  }, []);
+  }, [mirror]);
 
-  return <canvas ref={canvasRef} className={styles.field} aria-hidden="true" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`${styles.field}${mirror ? ` ${styles.mirror}` : ""}`}
+      aria-hidden="true"
+    />
+  );
 }

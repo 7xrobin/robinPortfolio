@@ -4,7 +4,8 @@ import TriangleField from "./TriangleField";
 export default function Hero() {
   return (
     <section className={styles.hero} data-screen-label="01 Hero">
-      <TriangleField />
+      {/* Mirrored: the frame sits on the right, so the field runs leftwards from it. */}
+      <TriangleField mirror />
       <div className={styles["hero-inner"]}>
         <div className={styles["hero-img"]} data-field="frame">
           <svg
@@ -75,19 +76,18 @@ export default function Hero() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/portrait.png" alt="Portrait of Robin" />
           </div>
+          <p className={styles["hero-hello"]}>Hi, I’m Robin Oliveira.</p>
         </div>
 
         <div className={styles["hero-text"]} data-field="text">
-          <p className={styles["hero-hello"]}>Hi, I’m Robin Oliveira.</p>
           <h1>
-            Shaping digital solutions, from first idea to <em>release</em>.
+            I shape digital solutions, from first idea to <em>release</em>.
           </h1>
           <p className={styles["hero-sub"]}>
-            I bring business and design thinking to every stage of the build, so what ships is smart, usable, and impactful.
-            <br />Where AI engineering meets user experience.
+            Engineer and product builder working where AI meets real software — turning models into tools people actually use, from the first prototype to production.
           </p>
         </div>
       </div>
-    </section >
+    </section>
   );
 }

@@ -112,16 +112,28 @@ img { display: block; max-width: 100%; }
 /* Page layout for the personal landing. Breakpoints match the design:
    mobile ≤ 560px, tablet 561–1080px, desktop above. */
 :root {
+  --gutter: clamp(20px, 5vw, 72px);
   --nav-h: 88px;
+  --nav-gap: 32px;
   --logo-h: 28px;
-  --hero-gap: 40px 80px;
-  --img-flex: 0 1 480px;
-  --img-max: 480px;
-  --img-margin: 48px 0 88px;
+  /* Copy on the left, the frame on the right. */
+  --hero-gap: 40px 64px;
+  --img-order: 2;
+  --img-flex: 0 1 560px;
+  --img-max: 560px;
+  --img-margin: 104px 0 64px;
+  --frame-glow: 22px;
+  --portrait-w: 76%;
+  --portrait-top: 10%;
+  --hello-left: -40px;
+  --hello-top: 80%;
+  --hello-pad: 12px 18px;
+  --hello-size: 17px;
   --text-flex: 1 1 420px;
   --text-pad: 64px 0 96px;
-  --h1-size: clamp(44px, 4.6vw, 58px);
+  --h1-size: clamp(44px, 4.6vw, 56px);
   --sub-size: 17px;
+  --sub-gap: 24px;
   /* The hero text's and the nav's intro timings (the rest are on .hero in
      components/Hero.module.css). CSS, so the intro runs without JS. */
   --intro-text-delay: 4350ms;
@@ -132,9 +144,12 @@ img { display: block; max-width: 100%; }
 @media (min-width: 561px) and (max-width: 1080px) {
   :root {
     --hero-gap: 32px 48px;
-    --img-flex: 0 1 42%;
-    --img-max: 400px;
+    --img-flex: 0 1 44%;
+    --img-max: 440px;
     --img-margin: 40px 0;
+    --hello-left: -24px;
+    --hello-size: 15px;
+    --hello-pad: 9px 14px;
     --text-flex: 1 1 0;
     --text-pad: 48px 0 72px;
     --h1-size: clamp(36px, 5vw, 52px);
@@ -143,16 +158,28 @@ img { display: block; max-width: 100%; }
 }
 @media (max-width: 560px) {
   :root {
+    /* The frame centred, the copy below it. */
+    --gutter: 24px;
     --nav-h: 72px;
+    --nav-gap: 20px;
     --logo-h: 22px;
-    --hero-gap: 40px 64px;
+    --hero-gap: 48px;
+    --img-order: 0;
     --img-flex: 1 1 100%;
-    --img-max: 86%;
-    --img-margin: 112px auto 8px;
+    --img-max: 300px;
+    --img-margin: 152px auto 0;
+    --frame-glow: 14px;
+    --portrait-w: 80%;
+    --portrait-top: 12%;
+    --hello-left: -21px;
+    --hello-top: 72%;
+    --hello-pad: 9px 14px;
+    --hello-size: 15px;
     --text-flex: 1 1 100%;
-    --text-pad: 16px 0 120px;
-    --h1-size: 40px;
+    --text-pad: 0 0 120px;
+    --h1-size: 36px;
     --sub-size: 16px;
+    --sub-gap: 18px;
   }
 }
 

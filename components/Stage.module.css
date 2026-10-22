@@ -14,13 +14,18 @@
   height: 100svh;
 }
 
+/* Each scene is its own stacking context, the work's above the hero's, so
+   nothing layered inside the hero (the copy and its fade on a phone) can
+   paint over the work. */
 .root[data-staged] .heroScene {
   height: 100%;
+  isolation: isolate;
 }
 
 .root[data-staged] .workScene {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 
 /* The inactive scene lets clicks through to the active one. */

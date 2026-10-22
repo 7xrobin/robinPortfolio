@@ -10,7 +10,7 @@
   max-width: 1280px;
   margin: 0 auto;
   height: var(--nav-h);
-  padding: 0 clamp(20px, 5vw, 72px);
+  padding: 0 var(--gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -33,7 +33,7 @@
 
 .links {
   display: flex;
-  gap: 32px;
+  gap: var(--nav-gap);
   font-size: 14px;
 }
 

@@ -50,6 +50,17 @@
   /* The fixed nav is taller than the padding there: clear it. */
   :global([data-staged]) .inner {
     padding-top: calc(var(--nav-h) + 16px);
+    padding-bottom: 24px;
+  }
+
+  /* Staged, the card has one screen to fit in: on a short phone the picture
+     gives up height so the text and the link stay on screen. */
+  :global([data-staged]) .track {
+    padding-bottom: 24px;
+  }
+
+  :global([data-staged]) .card-img {
+    max-height: max(96px, calc(100svh - 440px));
   }
 }
 

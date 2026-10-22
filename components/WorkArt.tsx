@@ -12,6 +12,10 @@ const TRACE_START = 0.1;
 const TRACE_STEP = 0.12;
 const TRACE_WIDTH = 0.3;
 
+// Every project's shade sits at the same point, bottom right: a change of
+// project changes the colour in place and never moves it.
+const SHADE_AT = ["78%", "72%"] as const;
+
 const corners = (x: number, y: number) =>
   [
     [x, y],
@@ -38,7 +42,7 @@ export default function WorkArt({ items, active }: { items: WorkItem[]; active: 
         return (
           <g key={item.slug} className={styles.project} data-active={p === active || undefined}>
             <defs>
-              <radialGradient id={`${key}-shade`} cx={art.shadeAt[0]} cy={art.shadeAt[1]} r="70%">
+              <radialGradient id={`${key}-shade`} cx={SHADE_AT[0]} cy={SHADE_AT[1]} r="70%">
                 <stop offset="0" stopColor={art.color} stopOpacity="0.55"></stop>
                 <stop offset="1" stopColor={art.color} stopOpacity="0"></stop>
               </radialGradient>
