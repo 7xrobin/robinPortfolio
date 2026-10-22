@@ -7,6 +7,7 @@ import {
   MOBILE_QUERY,
   fieldConfig,
   introEndMs,
+  leaveEndAt,
   presenceTime,
   type FieldConfig,
 } from "@/lib/field/config";
@@ -22,7 +23,6 @@ import {
   type Excluded,
 } from "@/lib/field/changes";
 import { designShape, edgeKey, nodeKey, type EdgeKey } from "@/lib/field/shape";
-import { growField, stopsAt } from "@/lib/field/grow";
 import {
   cellNodes,
   designToSection,
@@ -48,11 +48,8 @@ type NodeKey = readonly [r: number, c: number];
 const clamp01 = (u: number) => Math.min(1, Math.max(0, u));
 
 /** The order the trace reaches the design's elements in: outward from the
- *  frame centroid (the hero's intro), or top-down by `drop`. */
-type TraceOrder = "centroid" | "fromTop" | "fromBottom";
-
-/** Which field a TriangleField draws, and how the scroll moves it. */
-type Handoff = "leave" | "enter";
+ *  frame centroid (the intro), or bottom-up by `drop`. */
+type TraceOrder = "centroid" | "fromBottom";
 
 /** A design node placed in the section. */
 interface PlacedNode extends Point {
@@ -69,7 +66,7 @@ interface PlacedEdge {
   weight: number;
   /** Distance of `a` to the frame centroid. */
   dist: number;
-  /** The edge, upper end first: the scroll handoff traces it top-down. */
+  /** The edge, upper end first: scrolling away traces it from its upper end. */
   down: { a: Point; b: Point };
   /** How far down the design box the upper end sits, 0..1. */
   drop: number;
@@ -105,7 +102,7 @@ interface FieldState {
   /** Edges crossing the design's left edge; drawn clipped to the box. */
   stubs: PlacedEdge[];
   /** Nothing is drawn outside this box: the design's 1280 × 760 box in
-   *  section px for the hero, the whole section for the grown work field. */
+   *  section px. */
   box: Rect;
   fills: PlacedFill[];
   lit: PlacedLit[];
@@ -118,20 +115,12 @@ interface FieldState {
 }
 
 /**
- * Places every element in the section: positions, weights, distances to the
+ * Places the design in the section: positions, weights, distances to the
  * frame centroid, which time the intro trace, and drops down the box, which
- * time the scroll handoff. The hero places the design; the work field grows
- * its own triangles on the same lattice, over the whole section. The weights
- * fold in the horizontal fade and the nav band, so nothing reaches into the
- * nav bar.
+ * time the scroll-away. The weights fold in the horizontal fade and the nav
+ * band, so nothing reaches into the nav bar.
  */
-function place(
-  st: FieldState,
-  frame: Rect,
-  navBottom: number | null,
-  text: Rect | null,
-  handoff: Handoff,
-) {
+function place(st: FieldState, frame: Rect, navBottom: number | null, text: Rect | null) {
   // The static field put design point (320, 138.6), node (0, 0) of the design
   // data, on the frame's left corner x and apex y — not on the apex, which is
   // design (560, 138.6), six cells right. Anchoring the lattice half a frame
@@ -139,26 +128,15 @@ function place(
   const g = latticeFrame({ ...frame, left: frame.left - frame.width / 2 });
   st.g = g;
   const centre = frameCentroid(frame);
-  const grown = handoff === "enter";
-  const fadeAt = grown
-    ? (x: number) => stopsAt(st.cfg.grow.fade, x / Math.max(1, st.width))
-    : (x: number) => fade(x, g, st.cfg.fade);
   const at = ([r, c]: NodeKey): PlacedNode => {
     const p = nodePosition(g, r, c);
-    return { ...p, fade: fadeAt(p.x), band: navBand(p.y, navBottom, g.side, st.cfg.navBand) };
+    return { ...p, fade: fade(p.x, g, st.cfg.fade), band: navBand(p.y, navBottom, g.side, st.cfg.navBand) };
   };
   st.at = at;
   const dist = (x: number, y: number) => Math.hypot(x - centre.x, y - centre.y);
-  if (grown) {
-    st.box = { left: 0, top: 0, width: st.width, height: st.height };
-  } else {
-    const b0 = designToSection(g, 0, 0);
-    const b1 = designToSection(g, DESIGN.width, DESIGN.height);
-    st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
-  }
-  const source = grown
-    ? { ...growField(g, st.box, st.cfg.grow), stubs: [] }
-    : { edges: DESIGN_EDGES, stubs: DESIGN_STUBS, fills: DESIGN_FILLS, lit: DESIGN_LIT };
+  const b0 = designToSection(g, 0, 0);
+  const b1 = designToSection(g, DESIGN.width, DESIGN.height);
+  st.box = { left: b0.x, top: b0.y, width: b1.x - b0.x, height: b1.y - b0.y };
   const drop = (y: number) => clamp01((y - st.box.top) / st.box.height);
   const edge = ([ka, kb]: readonly [NodeKey, NodeKey]): PlacedEdge => {
     let a = at(ka);
@@ -180,9 +158,9 @@ function place(
       drop: drop(down.a.y),
     };
   };
-  st.edges = source.edges.map(edge);
-  st.stubs = source.stubs.map(edge);
-  st.fills = source.fills.map((f) => {
+  st.edges = DESIGN_EDGES.map(edge);
+  st.stubs = DESIGN_STUBS.map(edge);
+  st.fills = DESIGN_FILLS.map((f) => {
     const [p, q, r] = cellNodes(f.cell).map(at);
     return {
       cell: f.cell,
@@ -194,7 +172,7 @@ function place(
       drop: drop((p.y + q.y + r.y) / 3),
     };
   });
-  st.lit = source.lit.map((k) => {
+  st.lit = DESIGN_LIT.map((k) => {
     const n = at(k);
     return {
       key: nodeKey(k),
@@ -207,8 +185,8 @@ function place(
   });
   st.distMax = Math.max(1, ...st.edges.map((e) => e.dist), ...st.stubs.map((e) => e.dist));
   // The placement limits use the real frame (the portrait triangle), not
-  // the shifted lattice anchor. A field without live changes has none.
-  st.elig = grown ? null : eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
+  // the lattice frame shifted half a frame left.
+  st.elig = eligible(designShape(), { g, frame, text, navBottom, box: st.box }, st.cfg);
 }
 
 /**
@@ -238,8 +216,7 @@ function renderGlow(sprite: HTMLCanvasElement, st: FieldState): number {
 
 /**
  * The design's line gradient, made on `ctx` (a gradient belongs to its
- * context). Its ends are in design units, mapped onto the box: the design's
- * own on the hero, stretched over the section for the work field.
+ * context). Its ends are in design units, mapped onto the design's box.
  */
 function lineGradient(ctx: CanvasRenderingContext2D, st: FieldState): CanvasGradient | string {
   const { lines } = st.cfg;
@@ -351,10 +328,9 @@ function renderLines(
  * them. It is the same trace a rebuild draws after the intro, over the whole
  * design.
  *
- * The scroll handoff draws the same trace in another `order`: `fromTop`
- * starts each element later the lower it sits in the design box, and
- * `fromBottom` the higher, so played backwards the top goes first. Both
- * grow every edge from its upper end down.
+ * Scrolling away draws the same trace in the `fromBottom` order: each
+ * element starts later the higher it sits in the design box, so played
+ * backwards the top goes first. It grows every edge from its upper end down.
  */
 function renderTrace(
   ctx: CanvasRenderingContext2D,
@@ -367,7 +343,7 @@ function renderTrace(
   if (!st.g) return;
   const { lines, intro } = st.cfg;
   const key = (el: { dist: number; drop: number }) =>
-    order === "centroid" ? el.dist / st.distMax : order === "fromTop" ? el.drop : 1 - el.drop;
+    order === "centroid" ? el.dist / st.distMax : 1 - el.drop;
   const start = (k: number) => intro.traceStartMs + intro.spreadMs * smooth(k);
   const settle = (el: { dist: number; drop: number }) =>
     smooth((now - start(key(el)) - intro.edgeMs) / intro.settleMs);
@@ -414,10 +390,10 @@ function renderTrace(
 
 /**
  * The triangle field: the design's own triangles, fills and lit nodes on a
- * canvas filling its section, anchored on the section's `data-field="frame"`
+ * canvas filling its section, placed on the section's `data-field="frame"`
  * element, faded to the right like the design and kept below the nav bar.
  *
- * The hero mounts it with `handoff="leave"`: the intro traces it edge by edge
+ * The hero mounts it. The intro traces it edge by edge
  * outward from the frame centroid; after it, triangles dissolve and form
  * along the edge of the shape, chains of new triangles grow out of it,
  * triangles in the body are erased and traced again edge by edge, fills
@@ -428,14 +404,8 @@ function renderTrace(
  * It also sets `--hero-leave` (0..1) on the section, and `data-leaving`
  * while it is above 0, so the hero's CSS can play the portrait frame's
  * intro backwards with the field.
- *
- * The work section mounts it with `handoff="enter"` and `anchor` set to the
- * hero's frame: triangles grown on the hero's lattice over the whole
- * section (lib/field/grow.ts), so the hero's field reads as continuing down
- * the page. They are traced in from the top down as the section scrolls in,
- * with no live changes.
  */
-export default function TriangleField({ handoff, anchor }: { handoff: Handoff; anchor?: string }) {
+export default function TriangleField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -445,7 +415,7 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     if (!canvas || !section || !ctx) return;
 
     const pick = (name: string) => section.querySelector<HTMLElement>(`[data-field="${name}"]`);
-    const frameEl = anchor ? document.querySelector<HTMLElement>(anchor) : pick("frame");
+    const frameEl = pick("frame");
     const navEl = pick("nav");
     const textEl = pick("text");
     if (!frameEl) return;
@@ -489,21 +459,12 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     let layersDirty = true;
     /** How far the hero has scrolled away, 0..1: its field's presence is 1 − leave. */
     let leave = 0;
-    /** How far the work section has scrolled in, 0..1: its field's presence. */
-    let enter = 0;
 
     /** The hero's leave progress, from where the section sits in the viewport. */
     const leaveProgress = () => {
       const rect = section.getBoundingClientRect();
-      const end = rect.height - st.cfg.handoff.leaveEndAt * window.innerHeight;
+      const end = rect.height - leaveEndAt(st.cfg) * window.innerHeight;
       return clamp01(-rect.top / Math.max(1, end));
-    };
-
-    /** The work section's enter progress, from where it sits in the viewport. */
-    const enterProgress = () => {
-      const { enterStartAt, enterWholeAt } = st.cfg.handoff;
-      const rect = section.getBoundingClientRect();
-      return clamp01((enterStartAt * window.innerHeight - rect.top) / Math.max(1, enterWholeAt * rect.height));
     };
 
     /** Hands the hero's leave progress to its CSS, when it changed. */
@@ -547,7 +508,7 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
       canvas.height = Math.max(1, Math.round(st.height * st.dpr));
 
       if (frame.width > 0) {
-        place(st, frame, nav ? nav.top + nav.height : null, text, handoff);
+        place(st, frame, nav ? nav.top + nav.height : null, text);
       } else {
         st.g = null;
         st.elig = null;
@@ -620,21 +581,11 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     // absolute, so a late hydration joins the trace where it already is
     // instead of restarting it. Scrolling away plays the trace backwards to
     // the hero's presence: during the intro on the intro's own order, after
-    // it top-down, so the top rows go first. The work field has no intro:
-    // scrolling in traces it top-down to its presence.
+    // it top-down, so the top rows go first.
     const draw = (now: number) => {
       ctx.setTransform(st.dpr, 0, 0, st.dpr, 0, 0);
       ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, st.width, st.height);
-      if (handoff === "enter") {
-        if (reduced || enter >= 1) {
-          ctx.drawImage(fillLayer, 0, 0, st.width, st.height);
-          ctx.drawImage(lineLayer, 0, 0, st.width, st.height);
-        } else {
-          renderTrace(ctx, st, glow, glowSize, presenceTime(st.cfg, enter), "fromTop");
-        }
-        return;
-      }
       const shown = presenceTime(st.cfg, 1 - leave);
       if (!reduced && now < introEndMs(st.cfg)) {
         renderTrace(ctx, st, glow, glowSize, Math.min(now, shown), "centroid");
@@ -682,28 +633,7 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     const markDirty = () => {
       dirty = true;
       if (reduced) scheduleStill();
-      else if (handoff === "enter") schedule();
     };
-
-    // The work field has no loop: it moves only with the scroll, so a scroll
-    // or a resize asks for one frame, and the frame draws only when the
-    // presence or the layout changed. Once whole, it stays on the layers.
-    let drawnEnter = -1;
-    const scrollFrame = () => {
-      raf = 0;
-      const measured = dirty;
-      if (dirty) {
-        dirty = false;
-        measure();
-      }
-      enter = enterProgress();
-      if (!measured && enter === drawnEnter) return;
-      drawnEnter = enter;
-      draw(Infinity);
-    };
-    function schedule() {
-      if (!raf && !reduced && onScreen) raf = requestAnimationFrame(scrollFrame);
-    }
 
     // Reduced motion: one static frame, the design at rest, and no loop. It is
     // redrawn only when the geometry changes.
@@ -729,10 +659,8 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
         dirty = false;
         measure();
       }
-      if (handoff === "leave") {
-        leave = leaveProgress();
-        shareLeave();
-      }
+      leave = leaveProgress();
+      shareLeave();
       if (leave > 0) {
         // Scrolled away: the trace plays the design, so the live changes
         // are dropped, and none start until the hero is fully back.
@@ -749,13 +677,8 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     };
 
     // The loop runs only while the hero is on screen and the tab is visible.
-    // The work field's IntersectionObserver only gates its scroll frames.
     let onScreen = true;
     const sync = () => {
-      if (handoff === "enter") {
-        schedule();
-        return;
-      }
       const visible = !reduced && onScreen && document.visibilityState === "visible";
       if (visible && !raf) {
         lastNow = -1;
@@ -772,8 +695,6 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     });
     io.observe(section);
     document.addEventListener("visibilitychange", sync);
-    const onScroll = () => schedule();
-    if (handoff === "enter") window.addEventListener("scroll", onScroll, { passive: true });
 
     const onMotionChange = (e: MediaQueryListEvent) => {
       reduced = e.matches;
@@ -789,8 +710,6 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
       } else {
         cancelAnimationFrame(stillRaf);
         stillRaf = 0;
-        // The still frame drew the layers: the work field redraws its trace.
-        drawnEnter = -1;
         sync();
       }
     };
@@ -805,7 +724,6 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
     return () => {
       io.disconnect();
       document.removeEventListener("visibilitychange", sync);
-      window.removeEventListener("scroll", onScroll);
       reduce.removeEventListener("change", onMotionChange);
       ro.disconnect();
       cancelAnimationFrame(raf);
@@ -815,7 +733,7 @@ export default function TriangleField({ handoff, anchor }: { handoff: Handoff; a
       section.style.removeProperty("--hero-leave");
       section.removeAttribute("data-leaving");
     };
-  }, [handoff, anchor]);
+  }, []);
 
   return <canvas ref={canvasRef} className={styles.field} aria-hidden="true" />;
 }
