@@ -149,9 +149,10 @@ Decisions taken with the owner (2026-10-22):
   `position: absolute` at the top of the page as today, so the stacked fallback does not lay a
   backgroundless bar over the work content. The field still needs the nav bottom for its nav
   band: `TriangleField` finds `[data-field="nav"]` in the document, not only in its section,
-  and takes its bottom from the viewport (`getBoundingClientRect().bottom`, the bar's height
-  from the top of the screen) rather than relative to the section, so a re-measure while
-  scrolled does not shift the band.
+  and keeps measuring its bottom against the section (`relativeRect`, `TriangleField.tsx:543`).
+  That holds in both layouts: stacked, the absolute nav scrolls with the hero; staged, the hero
+  is pinned at the viewport top, so section and viewport coincide. A viewport-only bottom would
+  go negative on a re-measure while scrolled in the stacked fallback.
 - **The work field is removed, with everything only it used.** `Work.tsx` stops mounting
   `TriangleField`. `lib/field/grow.ts`, `FIELD.grow`, the whole `FIELD.handoff` block,
   `leaveProgress()`, `enterProgress()`, `fromTop`, the `Handoff` type and `handoff` / `anchor`
@@ -263,8 +264,8 @@ Decisions taken with the owner (2026-10-22):
 - With the work scene showing and the tab idle, the hero canvas does not redraw every frame
   (Performance panel: no per-frame `TriangleField` draw while `--hero-leave` is 1).
 - The work section has no canvas; `lib/field/grow.ts`, `FIELD.grow` and `FIELD.handoff` are gone,
-  and `grep -rn "growField\|stopsAt\|handoff\|anchor\|enterProgress\|leaveProgress" components lib`
-  finds nothing.
+  and `grep -rnw "growField\|stopsAt\|handoff\|anchor\|enterProgress\|leaveProgress" components lib`
+  finds nothing (whole words: `lib/field/lattice.ts` keeps "anchored").
 - The carousel shows exactly one card at every check size; on desktop it is split picture |
   text; prev/next move one card and disable at the ends.
 - With reduced motion (including switching it on mid-scene), or JS disabled, the sections stack
@@ -278,8 +279,8 @@ Decisions taken with the owner (2026-10-22):
 1. `refactor: drop the work section's grown field` — remove the `enter` mode, `anchor`,
    `fromTop`, `grow.ts`, `FIELD.grow` and the enter config; `Work.tsx` mounts no field.
 2. `refactor: move the nav out of the hero` — `Nav.tsx` + module, intro text tokens to `:root`,
-   still absolute at the page top; field finds the nav in the document and measures it from the
-   viewport.
+   still absolute at the page top; field finds the nav in the document and still measures it
+   against the section.
 3. `feat: one project card at a time, split on desktop` — card width, phone override gone,
    two-column grid ≥ 900 px.
 4. `feat: play the hero text out in reverse of its intro` — `--leave-text-*`, re-timed
