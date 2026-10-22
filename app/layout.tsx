@@ -26,8 +26,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
-      <body>{children}</body>
+    // Browser extensions (Grammarly, LanguageTool) write attributes onto
+    // <html> and <body> before React hydrates. This only silences attribute
+    // mismatches on these two elements, never on their children.
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
